@@ -110,3 +110,15 @@ Run `npm run dev` to start the development server on port 5000.
     - Basic sphere geometry for memory nodes
     - Removed complex Float component to prevent WebGL crashes
     - Added smooth camera lerp transitions
+  - Major 3D environment visual redesign
+    - Textured floors using grass and sand textures with repeating patterns
+    - Marble columns with fluted details and ornate capitals
+    - Grand arched entryways with decorative keystones
+    - Ornate pedestals beneath memory nodes
+    - Animated torches with flickering flames and dynamic lighting
+    - Glowing lanterns with pulsing emissive effects
+    - Enhanced central features: floating crystal, magical fountain with water particles, rotating globe, ancient tree
+    - Atmospheric effects: procedural sky, starfield, scene fog for depth
+    - Floating ambient particles throughout the palace
+    - Enhanced lighting with moving sun, fill lights, and warm point lights
+    - SimplePalace updated with matching visual upgrades

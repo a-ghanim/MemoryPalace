@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { useRef, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useTexture, Sky, Cloud, Stars } from "@react-three/drei";
+import { useTexture, Sky, Stars } from "@react-three/drei";
 import { useMemoryPalace, Room, PALACE_TEMPLATES, TemplateConfig } from "@/lib/stores/useMemoryPalace";
 
 function TexturedFloor({ config }: { config: TemplateConfig }) {
@@ -922,31 +922,6 @@ function AtmosphericEffects() {
         saturation={0} 
         fade 
         speed={0.5}
-      />
-
-      <Cloud
-        position={[-30, 25, -30]}
-        opacity={0.3}
-        speed={0.1}
-        width={20}
-        depth={8}
-        segments={20}
-      />
-      <Cloud
-        position={[40, 30, 20]}
-        opacity={0.25}
-        speed={0.15}
-        width={25}
-        depth={10}
-        segments={15}
-      />
-      <Cloud
-        position={[0, 35, 50]}
-        opacity={0.2}
-        speed={0.08}
-        width={30}
-        depth={12}
-        segments={25}
       />
     </>
   );
