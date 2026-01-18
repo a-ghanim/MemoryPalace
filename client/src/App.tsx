@@ -1,8 +1,9 @@
 import { Canvas } from "@react-three/fiber";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import "@fontsource/inter";
 
 import { useMemoryPalace, PALACE_TEMPLATES } from "./lib/stores/useMemoryPalace";
+import { useAuth } from "./lib/hooks/useAuth";
 import ContentInput from "./components/ui/ContentInput";
 import ExplorerHUD from "./components/ui/ExplorerHUD";
 import MiniMap from "./components/ui/MiniMap";
@@ -20,6 +21,21 @@ function App() {
   const config = PALACE_TEMPLATES[selectedTemplate];
   const playerPosition = useNavState((state) => state.position);
   const playerRotation = useNavState((state) => state.rotation);
+  const { checkAuth, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#f5f0e1' }}>
+        <div className="paper-card p-8 text-center">
+          <div className="paper-title text-xl">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (phase === "input") {
     return <ContentInput />;

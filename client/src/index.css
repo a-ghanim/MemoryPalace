@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -16,7 +16,7 @@
     overflow: hidden;
     width: 100vw;
     height: 100vh;
-    font-family: 'Patrick Hand', cursive;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 }
 
@@ -43,21 +43,21 @@ canvas {
 
   .paper-card {
     background-color: #fefcf3;
-    border: 3px solid #2d2d2d;
-    border-radius: 3px;
+    border: 2px solid #2d2d2d;
+    border-radius: 8px;
     box-shadow: 
-      5px 5px 0 #2d2d2d,
-      0 0 20px rgba(0,0,0,0.3);
+      4px 4px 0 #2d2d2d,
+      0 0 20px rgba(0,0,0,0.2);
     position: relative;
   }
 
   .paper-card-overlay {
     background-color: rgba(254, 252, 243, 0.97);
-    border: 3px solid #2d2d2d;
-    border-radius: 3px;
+    border: 2px solid #2d2d2d;
+    border-radius: 8px;
     box-shadow: 
-      5px 5px 0 #2d2d2d,
-      0 0 30px rgba(0,0,0,0.4);
+      4px 4px 0 #2d2d2d,
+      0 0 30px rgba(0,0,0,0.3);
     backdrop-filter: blur(4px);
     position: relative;
   }
@@ -65,14 +65,15 @@ canvas {
   .paper-btn {
     background-color: #fefcf3;
     border: 2px solid #2d2d2d;
-    border-radius: 2px;
+    border-radius: 6px;
     box-shadow: 3px 3px 0 #2d2d2d;
     color: #2d2d2d;
-    font-family: 'Patrick Hand', cursive;
-    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
     padding: 0.5rem 1.25rem;
     cursor: pointer;
-    transition: all 0.1s ease;
+    transition: all 0.15s ease;
   }
 
   .paper-btn:hover:not(:disabled) {
@@ -86,8 +87,8 @@ canvas {
   }
 
   .paper-btn:focus {
-    outline: 2px dashed #2d2d2d;
-    outline-offset: 3px;
+    outline: 2px solid #2d2d2d;
+    outline-offset: 2px;
   }
 
   .paper-btn:disabled {
@@ -105,7 +106,7 @@ canvas {
   }
 
   .paper-btn-primary:focus {
-    outline: 2px dashed #fefcf3;
+    outline: 2px solid #fefcf3;
   }
 
   .paper-btn-danger {
@@ -120,16 +121,16 @@ canvas {
   }
 
   .paper-btn-danger:focus {
-    outline: 2px dashed #c44;
+    outline: 2px solid #c44;
   }
 
   .paper-input {
     background-color: #fefcf3;
     border: 2px solid #2d2d2d;
-    border-radius: 2px;
+    border-radius: 6px;
     padding: 0.75rem 1rem;
-    font-family: 'Patrick Hand', cursive;
-    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
     color: #2d2d2d;
     width: 100%;
   }
@@ -144,19 +145,20 @@ canvas {
   }
 
   .paper-title {
-    font-family: 'Caveat', cursive;
-    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
     color: #2d2d2d;
   }
 
   .paper-text {
-    font-family: 'Patrick Hand', cursive;
+    font-family: 'Inter', sans-serif;
     color: #2d2d2d;
   }
 
   .paper-label {
-    font-family: 'Patrick Hand', cursive;
-    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
     color: #555;
     margin-bottom: 0.5rem;
     display: block;
@@ -164,7 +166,7 @@ canvas {
 
   .paper-divider {
     border: none;
-    border-top: 2px dashed #ccc;
+    border-top: 1px solid #ddd;
     margin: 1rem 0;
   }
 
@@ -173,15 +175,16 @@ canvas {
     padding: 0.25rem 0.75rem;
     background-color: #fefcf3;
     border: 1.5px solid #2d2d2d;
-    border-radius: 2px;
-    font-family: 'Patrick Hand', cursive;
-    font-size: 0.9rem;
+    border-radius: 4px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
     color: #2d2d2d;
   }
 
   .sketchy-border {
     border: 2px solid #2d2d2d;
-    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+    border-radius: 8px;
   }
 
   .hand-drawn-box {
@@ -194,7 +197,7 @@ canvas {
     position: absolute;
     inset: -4px;
     border: 2px solid #2d2d2d;
-    border-radius: 95% 4% 92% 5%/4% 95% 6% 95%;
+    border-radius: 8px;
     pointer-events: none;
   }
 }

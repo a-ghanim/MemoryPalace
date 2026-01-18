@@ -1,8 +1,12 @@
 import { useState } from "react";
 import { useMemoryPalace } from "@/lib/stores/useMemoryPalace";
 import { useNavState } from "@/components/palace/KeyboardNavigation";
+import { useAuth } from "@/lib/hooks/useAuth";
+import AuthModal from "./AuthModal";
 
 export default function ExplorerHUD() {
+  const { user } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const nodes = useMemoryPalace((state) => state.nodes);
   const rooms = useMemoryPalace((state) => state.rooms);
   const selectedNodeId = useMemoryPalace((state) => state.selectedNodeId);
@@ -79,6 +83,8 @@ export default function ExplorerHUD() {
 
   return (
     <>
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      
       {/* Pinned Topic Header */}
       <div className="fixed top-4 left-1/2 -translate-x-1/2 paper-card-overlay px-6 py-3 text-center z-40">
         <div className="paper-text" style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -113,7 +119,7 @@ export default function ExplorerHUD() {
             </button>
           )}
           <button
-            onClick={() => setShowSaveDialog(true)}
+            onClick={() => user ? setShowSaveDialog(true) : setShowAuthModal(true)}
             disabled={isLoading}
             className="w-full paper-btn paper-btn-primary disabled:opacity-50"
           >

@@ -1,13 +1,13 @@
 import { users, memoryPalaces, type User, type InsertUser, type MemoryPalace, type InsertMemoryPalace } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  getAllPalaces(): Promise<MemoryPalace[]>;
+  getAllPalaces(userId?: number): Promise<MemoryPalace[]>;
   getPalace(id: number): Promise<MemoryPalace | undefined>;
   createPalace(palace: InsertMemoryPalace): Promise<MemoryPalace>;
   updatePalace(id: number, palace: Partial<InsertMemoryPalace>): Promise<MemoryPalace | undefined>;
@@ -30,7 +30,12 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getAllPalaces(): Promise<MemoryPalace[]> {
+  async getAllPalaces(userId?: number): Promise<MemoryPalace[]> {
+    if (userId) {
+      return db.select().from(memoryPalaces)
+        .where(eq(memoryPalaces.userId, userId))
+        .orderBy(desc(memoryPalaces.updatedAt));
+    }
     return db.select().from(memoryPalaces).orderBy(desc(memoryPalaces.updatedAt));
   }
 

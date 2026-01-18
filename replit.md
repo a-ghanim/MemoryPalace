@@ -122,3 +122,16 @@ Run `npm run dev` to start the development server on port 5000.
     - Floating ambient particles throughout the palace
     - Enhanced lighting with moving sun, fill lights, and warm point lights
     - SimplePalace updated with matching visual upgrades
+  - Implemented user authentication system
+    - Passport-local strategy with scrypt password hashing
+    - Session management with memory store
+    - Auth routes: register, login, logout, current user
+    - Protected palace API routes with ownership checking
+    - Client-side auth hook (useAuth) with zustand
+    - AuthModal component for login/signup UI
+    - Sign in button in ContentInput, auth prompt for saving palaces
+    - Palaces now tied to user accounts (userId foreign key)
+  - Updated fonts from hand-drawn to modern readable style
+    - Inter for body text and UI elements
+    - Poppins for titles and headings
+    - Improved border radius and styling for modern look

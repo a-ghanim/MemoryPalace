@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertMemoryPalaceSchema } from "@shared/schema";
 import { parseContentWithClaude } from "./claudeParsing";
+import { requireAuth } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -26,9 +27,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/palaces", async (req, res) => {
+  app.get("/api/palaces", requireAuth, async (req, res) => {
     try {
-      const palaces = await storage.getAllPalaces();
+      const userId = req.user?.id;
+      const palaces = await storage.getAllPalaces(userId);
       res.json(palaces);
     } catch (error) {
       console.error("Error fetching palaces:", error);
@@ -36,7 +38,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/palaces/:id", async (req, res) => {
+  app.get("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -46,6 +48,9 @@ export async function registerRoutes(
       if (!palace) {
         return res.status(404).json({ error: "Palace not found" });
       }
+      if (palace.userId !== req.user?.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
       res.json(palace);
     } catch (error) {
       console.error("Error fetching palace:", error);
@@ -53,9 +58,10 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/palaces", async (req, res) => {
+  app.post("/api/palaces", requireAuth, async (req, res) => {
     try {
-      const parsed = insertMemoryPalaceSchema.safeParse(req.body);
+      const palaceData = { ...req.body, userId: req.user?.id };
+      const parsed = insertMemoryPalaceSchema.safeParse(palaceData);
       if (!parsed.success) {
         return res.status(400).json({ error: "Invalid palace data", details: parsed.error.errors });
       }
@@ -67,22 +73,27 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/palaces/:id", async (req, res) => {
+  app.put("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid palace ID" });
       }
       
-      const parsed = insertMemoryPalaceSchema.safeParse(req.body);
+      const existingPalace = await storage.getPalace(id);
+      if (!existingPalace) {
+        return res.status(404).json({ error: "Palace not found" });
+      }
+      if (existingPalace.userId !== req.user?.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const parsed = insertMemoryPalaceSchema.safeParse({ ...req.body, userId: req.user?.id });
       if (!parsed.success) {
         return res.status(400).json({ error: "Invalid palace data", details: parsed.error.errors });
       }
       
       const palace = await storage.updatePalace(id, parsed.data);
-      if (!palace) {
-        return res.status(404).json({ error: "Palace not found" });
-      }
       res.json(palace);
     } catch (error) {
       console.error("Error updating palace:", error);
@@ -90,16 +101,22 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/palaces/:id", async (req, res) => {
+  app.delete("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid palace ID" });
       }
-      const deleted = await storage.deletePalace(id);
-      if (!deleted) {
+      
+      const existingPalace = await storage.getPalace(id);
+      if (!existingPalace) {
         return res.status(404).json({ error: "Palace not found" });
       }
+      if (existingPalace.userId !== req.user?.id) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const deleted = await storage.deletePalace(id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting palace:", error);

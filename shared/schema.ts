@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -18,6 +19,7 @@ export type User = typeof users.$inferSelect;
 
 export const memoryPalaces = pgTable("memory_palaces", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
   template: text("template").notNull().default("mansion"),
   inputContent: text("input_content").notNull(),
