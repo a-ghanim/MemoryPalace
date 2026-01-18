@@ -76,6 +76,12 @@ function App() {
           <fog attach="fog" args={["#4a4560", 80, 150]} />
 
           <Lights config={config} />
+          
+          {/* Test cube to verify rendering works */}
+          <mesh position={[0, 1, 0]}>
+            <boxGeometry args={[2, 2, 2]} />
+            <meshStandardMaterial color="#ff0000" />
+          </mesh>
 
           <Suspense fallback={null}>
             <PalaceEnvironment />
