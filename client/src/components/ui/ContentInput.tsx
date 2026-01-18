@@ -178,38 +178,37 @@ Recursion is when a function calls itself, useful for problems that can be broke
     <div className="fixed inset-0 flex items-center justify-center overflow-auto py-8" style={{ backgroundColor: '#f5f0e1' }}>
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       
+      <div className="fixed top-4 right-4 z-50">
+        {user ? (
+          <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">
+            <span className="paper-text text-sm" style={{ color: '#666' }}>
+              {user.username}
+            </span>
+            <button
+              onClick={() => logout()}
+              className="paper-btn text-sm"
+              style={{ padding: '0.25rem 0.75rem' }}
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="paper-btn paper-btn-primary text-sm shadow-md"
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            Sign In
+          </button>
+        )}
+      </div>
+      
       <div className="w-full max-w-3xl mx-4 p-8 paper-card">
-        <div className="flex justify-between items-start mb-6">
-          <div className="text-center flex-1">
-            <h1 className="text-5xl paper-title mb-2">Memory Palace</h1>
-            <p className="paper-text text-lg" style={{ color: '#666' }}>
-              Transform your content into a navigable 3D space
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <span className="paper-text text-sm" style={{ color: '#666' }}>
-                  {user.username}
-                </span>
-                <button
-                  onClick={() => logout()}
-                  className="paper-btn text-sm"
-                  style={{ padding: '0.25rem 0.75rem' }}
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="paper-btn paper-btn-primary text-sm"
-                style={{ padding: '0.5rem 1rem' }}
-              >
-                Sign In
-              </button>
-            )}
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-5xl paper-title mb-2">Memory Palace</h1>
+          <p className="paper-text text-lg" style={{ color: '#666' }}>
+            Transform your content into a navigable 3D space
+          </p>
         </div>
 
         {user && savedPalaces.length > 0 && (

@@ -7,37 +7,62 @@ import { useMemoryPalace, Room, PALACE_TEMPLATES, TemplateConfig } from "@/lib/s
 function TexturedFloor({ config }: { config: TemplateConfig }) {
   const grassTexture = useTexture("/textures/grass.png");
   const sandTexture = useTexture("/textures/sand.jpg");
+  const woodTexture = useTexture("/textures/wood.jpg");
+  const asphaltTexture = useTexture("/textures/asphalt.png");
   
   useMemo(() => {
-    [grassTexture, sandTexture].forEach(texture => {
+    [grassTexture, sandTexture, woodTexture, asphaltTexture].forEach(texture => {
       texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
       texture.repeat.set(20, 20);
     });
-  }, [grassTexture, sandTexture]);
+  }, [grassTexture, sandTexture, woodTexture, asphaltTexture]);
+
+  const getFloorTexture = () => {
+    switch (config.id) {
+      case "garden": return grassTexture;
+      case "library": return woodTexture;
+      case "museum": return asphaltTexture;
+      default: return sandTexture;
+    }
+  };
+
+  const isOutdoor = config.id === "garden";
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-        <circleGeometry args={[120, 128]} />
-        <meshStandardMaterial 
-          map={grassTexture}
-          color="#88aa77"
-          roughness={0.95}
-          metalness={0}
-        />
-      </mesh>
+      {isOutdoor ? (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
+          <circleGeometry args={[120, 128]} />
+          <meshStandardMaterial 
+            map={grassTexture}
+            color="#66aa55"
+            roughness={0.95}
+            metalness={0}
+          />
+        </mesh>
+      ) : (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
+            <circleGeometry args={[120, 128]} />
+            <meshStandardMaterial 
+              color="#1a1a1a"
+              roughness={1}
+              metalness={0}
+            />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+            <circleGeometry args={[65, 128]} />
+            <meshStandardMaterial 
+              map={getFloorTexture()}
+              color={config.colors.floor} 
+              roughness={0.6}
+              metalness={config.id === "mansion" ? 0.15 : 0.05}
+            />
+          </mesh>
+        </>
+      )}
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <circleGeometry args={[65, 128]} />
-        <meshStandardMaterial 
-          map={sandTexture}
-          color={config.colors.floor} 
-          roughness={0.6}
-          metalness={0.05}
-        />
-      </mesh>
-
-      {[8, 20, 35, 50].map((radius, i) => (
+      {!isOutdoor && [8, 20, 35, 50].map((radius, i) => (
         <mesh key={`ring-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02 + i * 0.005, 0]}>
           <ringGeometry args={[radius - 0.3, radius + 0.3, 128]} />
           <meshStandardMaterial 
@@ -50,37 +75,32 @@ function TexturedFloor({ config }: { config: TemplateConfig }) {
         </mesh>
       ))}
 
+      {isOutdoor && (
+        <>
+          {[12, 25, 40].map((radius, i) => (
+            <mesh key={`path-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+              <ringGeometry args={[radius - 1.5, radius + 1.5, 48]} />
+              <meshStandardMaterial 
+                map={sandTexture}
+                color="#c9b896"
+                roughness={0.8}
+                metalness={0}
+              />
+            </mesh>
+          ))}
+        </>
+      )}
+
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <circleGeometry args={[5, 64]} />
         <meshStandardMaterial 
           color={config.colors.accent} 
-          metalness={0.7} 
-          roughness={0.15}
+          metalness={isOutdoor ? 0.1 : 0.7} 
+          roughness={isOutdoor ? 0.8 : 0.15}
           emissive={config.colors.accent}
           emissiveIntensity={0.2}
         />
       </mesh>
-
-      {Array.from({ length: 24 }).map((_, i) => {
-        const angle = (i / 24) * Math.PI * 2;
-        const radius = 5.2;
-        return (
-          <mesh 
-            key={`center-detail-${i}`}
-            rotation={[-Math.PI / 2, 0, 0]} 
-            position={[Math.cos(angle) * radius, 0.04, Math.sin(angle) * radius]}
-          >
-            <circleGeometry args={[0.15, 8]} />
-            <meshStandardMaterial 
-              color="#ffffff"
-              emissive="#ffffff"
-              emissiveIntensity={0.5}
-              metalness={0.9}
-              roughness={0.1}
-            />
-          </mesh>
-        );
-      })}
     </group>
   );
 }
@@ -714,60 +734,218 @@ function GrandRotunda({ config }: { config: TemplateConfig }) {
   );
 }
 
+function Bookshelf({ position, rotation, height = 5 }: { position: [number, number, number]; rotation: number; height?: number }) {
+  const bookHeights = useMemo(() => 
+    Array.from({ length: 24 }, (_, i) => 0.6 + ((i * 7 + 3) % 5) * 0.04), 
+  []);
+  
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, height / 2, 0]} castShadow>
+        <boxGeometry args={[2.5, height, 0.5]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.8} metalness={0.1} />
+      </mesh>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <group key={i}>
+          <mesh position={[0, 0.8 + i * 1.1, 0.05]} castShadow>
+            <boxGeometry args={[2.3, 0.08, 0.4]} />
+            <meshStandardMaterial color="#4a3728" roughness={0.9} />
+          </mesh>
+          {Array.from({ length: 6 }).map((_, j) => (
+            <mesh key={j} position={[-0.9 + j * 0.35, 0.5 + i * 1.1, 0.05]} castShadow>
+              <boxGeometry args={[0.25, bookHeights[i * 6 + j], 0.3]} />
+              <meshStandardMaterial 
+                color={["#8B0000", "#2F4F4F", "#8B4513", "#191970", "#556B2F", "#4A0000"][j % 6]}
+                roughness={0.7}
+              />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function DisplayCase({ position, rotation }: { position: [number, number, number]; rotation: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[1.2, 0.8, 0.8]} />
+        <meshStandardMaterial color="#3a3a3a" roughness={0.3} metalness={0.5} />
+      </mesh>
+      <mesh position={[0, 1.2, 0]}>
+        <boxGeometry args={[1, 1.2, 0.6]} />
+        <meshStandardMaterial color="#ffffff" transparent opacity={0.2} roughness={0} metalness={0.9} />
+      </mesh>
+      <mesh position={[0, 1, 0]}>
+        <cylinderGeometry args={[0.15, 0.2, 0.6, 8]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.2} emissive="#c9a227" emissiveIntensity={0.3} />
+      </mesh>
+      <pointLight position={[0, 1.5, 0]} intensity={0.5} distance={4} color="#ffffee" />
+    </group>
+  );
+}
+
+function GardenTree({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.25, 3, 8]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.95} />
+      </mesh>
+      <mesh position={[0, 3.5, 0]} castShadow>
+        <sphereGeometry args={[1.5, 12, 12]} />
+        <meshStandardMaterial color="#2d6a35" roughness={0.85} />
+      </mesh>
+      <mesh position={[0.5, 4, 0.3]} castShadow>
+        <sphereGeometry args={[0.8, 8, 8]} />
+        <meshStandardMaterial color="#38803f" roughness={0.85} />
+      </mesh>
+    </group>
+  );
+}
+
+function FlowerBed({ position, rotation }: { position: [number, number, number]; rotation: number }) {
+  const colors = ["#ff6b8a", "#ffd93d", "#6bcf6b", "#9d65c9", "#ff8c42"];
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.15, 0]} castShadow>
+        <boxGeometry args={[2, 0.3, 1]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.35, 0]}>
+        <boxGeometry args={[1.8, 0.1, 0.8]} />
+        <meshStandardMaterial color="#3d2817" roughness={1} />
+      </mesh>
+      {Array.from({ length: 8 }).map((_, i) => (
+        <group key={i} position={[-0.7 + (i % 4) * 0.45, 0.4, -0.2 + Math.floor(i / 4) * 0.4]}>
+          <mesh position={[0, 0.15, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.3, 4]} />
+            <meshStandardMaterial color="#228B22" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, 0.35, 0]}>
+            <sphereGeometry args={[0.08, 8, 8]} />
+            <meshStandardMaterial color={colors[i % 5]} emissive={colors[i % 5]} emissiveIntensity={0.2} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function RoomChamber({ room, index, config }: { room: Room; index: number; config: TemplateConfig }) {
   const [x, , z] = room.position;
   const roomRadius = 7;
   const wallHeight = 6;
   const sandTexture = useTexture("/textures/sand.jpg");
+  const woodTexture = useTexture("/textures/wood.jpg");
+  const grassTexture = useTexture("/textures/grass.png");
 
   useMemo(() => {
-    sandTexture.wrapS = sandTexture.wrapT = THREE.RepeatWrapping;
-    sandTexture.repeat.set(4, 4);
-  }, [sandTexture]);
+    [sandTexture, woodTexture, grassTexture].forEach(t => {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(4, 4);
+    });
+  }, [sandTexture, woodTexture, grassTexture]);
+
+  const isGarden = config.id === "garden";
+  const isLibrary = config.id === "library";
+  const isMuseum = config.id === "museum";
+  const isMansion = config.id === "mansion";
+
+  const getFloorTexture = () => {
+    if (isGarden) return grassTexture;
+    if (isLibrary) return woodTexture;
+    return sandTexture;
+  };
 
   return (
     <group position={[x, 0, z]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
         <circleGeometry args={[roomRadius, 48]} />
         <meshStandardMaterial 
-          map={sandTexture}
+          map={getFloorTexture()}
           color={config.colors.floor} 
-          metalness={0.08} 
-          roughness={0.45}
+          metalness={isLibrary ? 0.1 : 0.08} 
+          roughness={isGarden ? 0.9 : 0.45}
         />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-        <ringGeometry args={[roomRadius * 0.55, roomRadius * 0.62, 48]} />
-        <meshStandardMaterial 
-          color={config.colors.accent} 
-          metalness={0.35} 
-          roughness={0.25}
-          emissive={config.colors.accent}
-          emissiveIntensity={0.1}
-        />
-      </mesh>
+      {!isGarden && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
+            <ringGeometry args={[roomRadius * 0.55, roomRadius * 0.62, 48]} />
+            <meshStandardMaterial 
+              color={config.colors.accent} 
+              metalness={0.35} 
+              roughness={0.25}
+              emissive={config.colors.accent}
+              emissiveIntensity={0.1}
+            />
+          </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <ringGeometry args={[roomRadius - 0.3, roomRadius, 48]} />
-        <meshStandardMaterial 
-          color={config.colors.accent} 
-          metalness={0.3} 
-          roughness={0.2}
-        />
-      </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <ringGeometry args={[roomRadius - 0.3, roomRadius, 48]} />
+            <meshStandardMaterial 
+              color={config.colors.accent} 
+              metalness={0.3} 
+              roughness={0.2}
+            />
+          </mesh>
 
-      <mesh position={[0, wallHeight / 2, 0]}>
-        <cylinderGeometry args={[roomRadius, roomRadius, wallHeight, 48, 1, true]} />
-        <meshStandardMaterial 
-          color={config.colors.walls} 
-          side={THREE.BackSide} 
-          metalness={0.05} 
-          roughness={0.4}
-        />
-      </mesh>
+          <mesh position={[0, wallHeight / 2, 0]}>
+            <cylinderGeometry args={[roomRadius, roomRadius, wallHeight, 48, 1, true]} />
+            <meshStandardMaterial 
+              color={config.colors.walls} 
+              side={THREE.BackSide} 
+              metalness={0.05} 
+              roughness={0.4}
+            />
+          </mesh>
+        </>
+      )}
 
-      {config.style.hasDome && (
+      {isGarden && (
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+            <ringGeometry args={[roomRadius - 1, roomRadius, 48]} />
+            <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.8} />
+          </mesh>
+          {Array.from({ length: 6 }).map((_, i) => {
+            const angle = (i / 6) * Math.PI * 2;
+            return <GardenTree key={`tree-${index}-${i}`} position={[Math.cos(angle) * (roomRadius - 0.5), 0, Math.sin(angle) * (roomRadius - 0.5)]} />;
+          })}
+          {Array.from({ length: 4 }).map((_, i) => {
+            const angle = ((i + 0.5) / 4) * Math.PI * 2;
+            return <FlowerBed key={`flower-${index}-${i}`} position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]} rotation={angle} />;
+          })}
+        </>
+      )}
+
+      {isLibrary && Array.from({ length: 8 }).map((_, i) => {
+        const angle = (i / 8) * Math.PI * 2;
+        return (
+          <Bookshelf
+            key={`shelf-${index}-${i}`}
+            position={[Math.cos(angle) * (roomRadius - 0.3), 0, Math.sin(angle) * (roomRadius - 0.3)]}
+            rotation={angle + Math.PI}
+            height={wallHeight - 1}
+          />
+        );
+      })}
+
+      {isMuseum && Array.from({ length: 6 }).map((_, i) => {
+        const angle = ((i + 0.5) / 6) * Math.PI * 2;
+        return (
+          <DisplayCase
+            key={`case-${index}-${i}`}
+            position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]}
+            rotation={angle}
+          />
+        );
+      })}
+
+      {config.style.hasDome && !isGarden && (
         <mesh position={[0, wallHeight, 0]}>
           <sphereGeometry args={[roomRadius, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
           <meshStandardMaterial 
@@ -779,7 +957,7 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
         </mesh>
       )}
 
-      {config.style.hasColumns && Array.from({ length: 8 }).map((_, i) => {
+      {config.style.hasColumns && !isGarden && Array.from({ length: 8 }).map((_, i) => {
         const angle = (i / 8) * Math.PI * 2;
         return (
           <MarbleColumn
@@ -791,7 +969,7 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
         );
       })}
 
-      {config.style.hasTorches ? (
+      {config.style.hasTorches && !isGarden ? (
         Array.from({ length: 6 }).map((_, i) => {
           const angle = ((i + 0.5) / 6) * Math.PI * 2;
           return (
@@ -801,7 +979,7 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
             />
           );
         })
-      ) : (
+      ) : !isGarden && (
         Array.from({ length: 6 }).map((_, i) => {
           const angle = ((i + 0.5) / 6) * Math.PI * 2;
           return (
@@ -814,8 +992,8 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
       )}
 
       <pointLight 
-        position={[0, wallHeight + 1, 0]} 
-        intensity={1.2} 
+        position={[0, isGarden ? 8 : wallHeight + 1, 0]} 
+        intensity={isGarden ? 2 : 1.2} 
         distance={20} 
         color={config.colors.ambient}
         decay={2}
