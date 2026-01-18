@@ -66,3 +66,6 @@ Run `npm run dev` to start the development server on port 5000.
   - Added content input UI with sample content
   - Created interactive memory nodes with edit functionality
   - Fixed pointer lock to only activate on canvas clicks
+  - Enhanced content parsing to handle headings, lists, definitions, facts
+  - Added customizable palace templates: Mansion, Museum, Garden, Library
+  - Each template has unique colors, room names, and central features
