@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMemoryPalace } from "@/lib/stores/useMemoryPalace";
+import { useNavState } from "@/components/palace/KeyboardNavigation";
 
 export default function ExplorerHUD() {
   const nodes = useMemoryPalace((state) => state.nodes);
@@ -20,8 +21,33 @@ export default function ExplorerHUD() {
   const [editContent, setEditContent] = useState("");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [expandedContent, setExpandedContent] = useState(false);
+
+  const currentNodeIndex = useNavState((s) => s.currentNodeIndex);
+  const setCurrentNodeIndex = useNavState((s) => s.setCurrentNodeIndex);
+  const setTargetPosition = useNavState((s) => s.setTargetPosition);
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+
+  const navigateToNode = (index: number) => {
+    if (index >= 0 && index < nodes.length) {
+      setCurrentNodeIndex(index);
+      const node = nodes[index];
+      setTargetPosition([node.position[0] - 3, 3, node.position[2] + 4]);
+      selectNode(node.id);
+      setExpandedContent(false);
+    }
+  };
+
+  const goToNextNode = () => {
+    const newIndex = currentNodeIndex >= nodes.length - 1 ? 0 : currentNodeIndex + 1;
+    navigateToNode(newIndex);
+  };
+
+  const goToPrevNode = () => {
+    const newIndex = currentNodeIndex <= 0 ? nodes.length - 1 : currentNodeIndex - 1;
+    navigateToNode(newIndex);
+  };
 
   const handleStartEdit = () => {
     if (selectedNode) {
@@ -95,15 +121,36 @@ export default function ExplorerHUD() {
       <div className="fixed top-4 right-4 p-4 paper-card-overlay max-w-xs">
         <h3 className="paper-title text-lg mb-2">Controls</h3>
         <div className="paper-text space-y-1" style={{ fontSize: '0.9rem', color: '#555' }}>
-          <p><strong>WASD</strong> - Move</p>
-          <p><strong>Mouse</strong> - Look around</p>
-          <p><strong>Click</strong> - Select node</p>
-          <p><strong>ESC</strong> - Release mouse</p>
+          <p><strong>← →</strong> or <strong>A D</strong> - Prev/Next node</p>
+          <p><strong>↑ ↓</strong> or <strong>W S</strong> - Jump 3 nodes</p>
+          <p><strong>Enter</strong> or <strong>Space</strong> - Expand</p>
+          <p><strong>1-9</strong> - Jump to node #</p>
+          <p><strong>ESC</strong> - Overview</p>
         </div>
       </div>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 paper-card-overlay px-6 py-2">
-        <span className="paper-text">Click anywhere to start exploring</span>
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 paper-card-overlay px-4 py-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goToPrevNode}
+            disabled={nodes.length === 0}
+            className="paper-btn disabled:opacity-50"
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            ← Prev
+          </button>
+          <span className="paper-text" style={{ minWidth: '80px', textAlign: 'center' }}>
+            {nodes.length > 0 ? `${currentNodeIndex + 1} / ${nodes.length}` : "No nodes"}
+          </span>
+          <button
+            onClick={goToNextNode}
+            disabled={nodes.length === 0}
+            className="paper-btn disabled:opacity-50"
+            style={{ padding: '0.5rem 1rem' }}
+          >
+            Next →
+          </button>
+        </div>
       </div>
 
       {showSaveDialog && (
@@ -185,53 +232,85 @@ export default function ExplorerHUD() {
             <>
               <div className="mb-3">
                 <h4 className="paper-text font-bold text-lg">{selectedNode.title}</h4>
-                {selectedNode.category && (
-                  <span className="paper-tag" style={{ marginTop: '0.5rem' }}>
-                    {selectedNode.category}
-                  </span>
-                )}
-              </div>
-              
-              <div
-                className="p-4 rounded max-h-32 overflow-y-auto"
-                style={{ 
-                  backgroundColor: '#f8f5ec',
-                  borderLeft: `4px solid ${selectedNode.color}`,
-                  border: '1px solid #ddd'
-                }}
-              >
-                <p className="paper-text" style={{ lineHeight: 1.6 }}>{selectedNode.content}</p>
-              </div>
-              
-              {selectedNode.mnemonic && (
-                <div className="mt-3 p-3 rounded" style={{ backgroundColor: '#fff8e7', border: '1px dashed #c90' }}>
-                  <p className="paper-text font-bold" style={{ fontSize: '0.85rem', color: '#a70' }}>Memory Trick</p>
-                  <p className="paper-text">{selectedNode.mnemonic}</p>
-                </div>
-              )}
-              
-              {selectedNode.keywords && selectedNode.keywords.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {selectedNode.keywords.map((keyword, i) => (
-                    <span key={i} className="paper-tag" style={{ fontSize: '0.8rem' }}>
-                      {keyword}
+                <div className="flex items-center gap-2 mt-1">
+                  {selectedNode.category && (
+                    <span className="paper-tag">
+                      {selectedNode.category}
                     </span>
-                  ))}
+                  )}
+                  <span className="paper-text" style={{ fontSize: '0.85rem', color: '#888' }}>
+                    Room: {rooms[selectedNode.roomIndex]?.name || "Unknown"}
+                  </span>
                 </div>
+              </div>
+              
+              {!expandedContent ? (
+                <button
+                  onClick={() => setExpandedContent(true)}
+                  className="w-full paper-btn paper-btn-primary mb-3"
+                >
+                  Read Content
+                </button>
+              ) : (
+                <>
+                  <div
+                    className="p-4 rounded max-h-48 overflow-y-auto mb-3"
+                    style={{ 
+                      backgroundColor: '#f8f5ec',
+                      borderLeft: `4px solid ${selectedNode.color}`,
+                      border: '1px solid #ddd'
+                    }}
+                  >
+                    <p className="paper-text" style={{ lineHeight: 1.6 }}>{selectedNode.content}</p>
+                  </div>
+                  
+                  {selectedNode.mnemonic && (
+                    <div className="mb-3 p-3 rounded" style={{ backgroundColor: '#fff8e7', border: '1px dashed #c90' }}>
+                      <p className="paper-text font-bold" style={{ fontSize: '0.85rem', color: '#a70' }}>Memory Trick</p>
+                      <p className="paper-text">{selectedNode.mnemonic}</p>
+                    </div>
+                  )}
+                  
+                  {selectedNode.keywords && selectedNode.keywords.length > 0 && (
+                    <div className="mb-3 flex flex-wrap gap-1">
+                      {selectedNode.keywords.map((keyword, i) => (
+                        <span key={i} className="paper-tag" style={{ fontSize: '0.8rem' }}>
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={() => setExpandedContent(false)}
+                    className="w-full paper-btn mb-3"
+                  >
+                    Collapse
+                  </button>
+                </>
               )}
               
               <hr className="paper-divider" />
               
-              <div className="flex justify-between items-center">
-                <span className="paper-text" style={{ fontSize: '0.85rem', color: '#888' }}>
-                  Room: {rooms[selectedNode.roomIndex]?.name || "Unknown"}
-                </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={goToPrevNode}
+                  className="flex-1 paper-btn"
+                >
+                  ← Prev
+                </button>
                 <button
                   onClick={handleStartEdit}
                   className="paper-btn"
-                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.9rem' }}
+                  style={{ padding: '0.5rem 0.75rem' }}
                 >
                   Edit
+                </button>
+                <button
+                  onClick={goToNextNode}
+                  className="flex-1 paper-btn"
+                >
+                  Next →
                 </button>
               </div>
             </>
