@@ -48,8 +48,8 @@ function App() {
             powerPreference: "default",
           }}
         >
-          <color attach="background" args={["#1a1a3a"]} />
-          <fog attach="fog" args={["#1a1a3a", 30, 100]} />
+          <color attach="background" args={["#1a1520"]} />
+          <fog attach="fog" args={["#1a1520", 35, 80]} />
 
           <Lights />
 

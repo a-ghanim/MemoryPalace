@@ -1,23 +1,23 @@
 export default function Lights() {
   return (
     <>
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.4} color="#ffeedd" />
       <directionalLight
-        position={[10, 20, 10]}
-        intensity={1.2}
+        position={[15, 30, 15]}
+        intensity={0.8}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={50}
-        shadow-camera-left={-30}
-        shadow-camera-right={30}
-        shadow-camera-top={30}
-        shadow-camera-bottom={-30}
+        shadow-camera-far={60}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
       />
       <hemisphereLight
-        color="#b1e1ff"
-        groundColor="#8B7FCF"
-        intensity={0.8}
+        color="#ffd4a3"
+        groundColor="#8b7355"
+        intensity={0.5}
       />
     </>
   );
