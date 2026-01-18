@@ -10,11 +10,15 @@ interface NavState {
   targetPosition: [number, number, number];
   rotation: number;
   initialized: boolean;
+  freeNavigation: boolean;
+  hideUI: boolean;
   setCurrentNodeIndex: (index: number) => void;
   setPosition: (pos: [number, number, number]) => void;
   setTargetPosition: (pos: [number, number, number]) => void;
   setRotation: (rot: number) => void;
   setInitialized: (val: boolean) => void;
+  toggleFreeNavigation: () => void;
+  toggleHideUI: () => void;
 }
 
 export const useNavState = create<NavState>((set) => ({
@@ -23,11 +27,15 @@ export const useNavState = create<NavState>((set) => ({
   targetPosition: [0, 4, 15],
   rotation: 0,
   initialized: false,
+  freeNavigation: false,
+  hideUI: false,
   setCurrentNodeIndex: (index) => set({ currentNodeIndex: index }),
   setPosition: (pos) => set({ position: pos }),
   setTargetPosition: (pos) => set({ targetPosition: pos }),
   setRotation: (rot) => set({ rotation: rot }),
   setInitialized: (val) => set({ initialized: val }),
+  toggleFreeNavigation: () => set((state) => ({ freeNavigation: !state.freeNavigation })),
+  toggleHideUI: () => set((state) => ({ hideUI: !state.hideUI })),
 }));
 
 export default function KeyboardNavigation() {
@@ -43,9 +51,15 @@ export default function KeyboardNavigation() {
   const setRotation = useNavState((s) => s.setRotation);
   const initialized = useNavState((s) => s.initialized);
   const setInitialized = useNavState((s) => s.setInitialized);
+  const freeNavigation = useNavState((s) => s.freeNavigation);
+  const toggleFreeNavigation = useNavState((s) => s.toggleFreeNavigation);
+  const toggleHideUI = useNavState((s) => s.toggleHideUI);
 
   const currentPos = useRef(new THREE.Vector3(0, 4, 15));
   const lookAtTarget = useRef(new THREE.Vector3(0, 1, 0));
+  const freeRotation = useRef({ x: 0, y: 0 });
+  const velocity = useRef(new THREE.Vector3());
+  const keysPressed = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     camera.position.set(0, 4, 15);
@@ -67,6 +81,20 @@ export default function KeyboardNavigation() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      keysPressed.current.add(e.key.toLowerCase());
+      
+      if (e.key === "h" || e.key === "H") {
+        toggleHideUI();
+        return;
+      }
+      
+      if (e.key === "f" || e.key === "F") {
+        toggleFreeNavigation();
+        return;
+      }
+      
+      if (freeNavigation) return;
+      
       if (nodes.length === 0) return;
 
       let newIndex = currentNodeIndex;
@@ -128,33 +156,108 @@ export default function KeyboardNavigation() {
         selectNode(node.id);
       }
     };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      keysPressed.current.delete(e.key.toLowerCase());
+    };
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!freeNavigation) return;
+      if (document.pointerLockElement) {
+        freeRotation.current.y -= e.movementX * 0.002;
+        freeRotation.current.x -= e.movementY * 0.002;
+        freeRotation.current.x = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, freeRotation.current.x));
+      }
+    };
+    
+    const handleCanvasClick = () => {
+      if (freeNavigation) {
+        const canvas = document.querySelector("canvas");
+        if (canvas && !document.pointerLockElement) {
+          canvas.requestPointerLock();
+        }
+      }
+    };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [nodes, currentNodeIndex, setCurrentNodeIndex, setTargetPosition, selectNode]);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("click", handleCanvasClick);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("click", handleCanvasClick);
+    };
+  }, [nodes, currentNodeIndex, setCurrentNodeIndex, setTargetPosition, selectNode, freeNavigation, toggleFreeNavigation, toggleHideUI]);
 
   useFrame(() => {
-    const target = new THREE.Vector3(targetPosition[0], targetPosition[1], targetPosition[2]);
-    currentPos.current.lerp(target, 0.05);
-    camera.position.copy(currentPos.current);
-
-    if (currentNodeIndex >= 0 && currentNodeIndex < nodes.length) {
-      const node = nodes[currentNodeIndex];
-      lookAtTarget.current.lerp(
-        new THREE.Vector3(node.position[0], 2, node.position[2]),
-        0.08
-      );
+    if (freeNavigation) {
+      const MOVE_SPEED = 0.15;
+      const FRICTION = 0.9;
+      
+      const direction = new THREE.Vector3();
+      if (keysPressed.current.has("w") || keysPressed.current.has("arrowup")) direction.z -= 1;
+      if (keysPressed.current.has("s") || keysPressed.current.has("arrowdown")) direction.z += 1;
+      if (keysPressed.current.has("a") || keysPressed.current.has("arrowleft")) direction.x -= 1;
+      if (keysPressed.current.has("d") || keysPressed.current.has("arrowright")) direction.x += 1;
+      
+      direction.normalize();
+      
+      const forward = new THREE.Vector3(0, 0, -1);
+      forward.applyQuaternion(camera.quaternion);
+      forward.y = 0;
+      forward.normalize();
+      
+      const right = new THREE.Vector3(1, 0, 0);
+      right.applyQuaternion(camera.quaternion);
+      right.y = 0;
+      right.normalize();
+      
+      const moveVector = new THREE.Vector3();
+      moveVector.addScaledVector(forward, -direction.z * MOVE_SPEED);
+      moveVector.addScaledVector(right, direction.x * MOVE_SPEED);
+      
+      velocity.current.add(moveVector);
+      velocity.current.multiplyScalar(FRICTION);
+      
+      currentPos.current.add(velocity.current);
+      currentPos.current.y = Math.max(1, Math.min(20, currentPos.current.y));
+      
+      camera.position.copy(currentPos.current);
+      
+      const euler = new THREE.Euler(freeRotation.current.x, freeRotation.current.y, 0, "YXZ");
+      camera.quaternion.setFromEuler(euler);
+      
+      setPosition([currentPos.current.x, currentPos.current.y, currentPos.current.z]);
+      
+      const lookDir = new THREE.Vector3();
+      camera.getWorldDirection(lookDir);
+      const rotation = Math.atan2(lookDir.x, lookDir.z);
+      setRotation(rotation);
     } else {
-      lookAtTarget.current.lerp(new THREE.Vector3(0, 1, 0), 0.05);
+      const target = new THREE.Vector3(targetPosition[0], targetPosition[1], targetPosition[2]);
+      currentPos.current.lerp(target, 0.05);
+      camera.position.copy(currentPos.current);
+
+      if (currentNodeIndex >= 0 && currentNodeIndex < nodes.length) {
+        const node = nodes[currentNodeIndex];
+        lookAtTarget.current.lerp(
+          new THREE.Vector3(node.position[0], 2, node.position[2]),
+          0.08
+        );
+      } else {
+        lookAtTarget.current.lerp(new THREE.Vector3(0, 1, 0), 0.05);
+      }
+      
+      camera.lookAt(lookAtTarget.current);
+      setPosition([currentPos.current.x, currentPos.current.y, currentPos.current.z]);
+      
+      const lookDir = new THREE.Vector3();
+      camera.getWorldDirection(lookDir);
+      const rotation = Math.atan2(lookDir.x, lookDir.z);
+      setRotation(rotation);
     }
-    
-    camera.lookAt(lookAtTarget.current);
-    setPosition([currentPos.current.x, currentPos.current.y, currentPos.current.z]);
-    
-    const lookDir = new THREE.Vector3();
-    camera.getWorldDirection(lookDir);
-    const rotation = Math.atan2(lookDir.x, lookDir.z);
-    setRotation(rotation);
   });
 
   return null;

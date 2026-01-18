@@ -20,6 +20,9 @@ export default function ExplorerHUD() {
   const isLoading = useMemoryPalace((state) => state.isLoading);
   const getDueCount = useMemoryPalace((state) => state.getDueCount);
   const startReviewSession = useMemoryPalace((state) => state.startReviewSession);
+  
+  const hideUI = useNavState((s) => s.hideUI);
+  const freeNavigation = useNavState((s) => s.freeNavigation);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -81,6 +84,18 @@ export default function ExplorerHUD() {
     }, 1500);
   };
 
+  if (hideUI) {
+    return (
+      <div className="fixed bottom-4 left-4 paper-card-overlay px-3 py-2" style={{ opacity: 0.7 }}>
+        <div className="paper-text" style={{ fontSize: '0.75rem', color: '#555' }}>
+          <p><strong>H</strong> - Show UI</p>
+          <p><strong>F</strong> - {freeNavigation ? "Guided mode" : "Free roam"}</p>
+          {freeNavigation && <p><strong>Click</strong> to move freely</p>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
@@ -137,11 +152,24 @@ export default function ExplorerHUD() {
       <div className="fixed top-24 right-4 p-4 paper-card-overlay max-w-xs">
         <h3 className="paper-title text-lg mb-2">Controls</h3>
         <div className="paper-text space-y-1" style={{ fontSize: '0.9rem', color: '#555' }}>
-          <p><strong>← →</strong> or <strong>A D</strong> - Prev/Next node</p>
-          <p><strong>↑ ↓</strong> or <strong>W S</strong> - Jump 3 nodes</p>
-          <p><strong>Enter</strong> or <strong>Space</strong> - Expand</p>
-          <p><strong>1-9</strong> - Jump to node #</p>
-          <p><strong>ESC</strong> - Overview</p>
+          {freeNavigation ? (
+            <>
+              <p><strong>WASD</strong> - Move freely</p>
+              <p><strong>Mouse</strong> - Look around</p>
+              <p><strong>Click</strong> - Enable mouse look</p>
+            </>
+          ) : (
+            <>
+              <p><strong>← →</strong> or <strong>A D</strong> - Prev/Next node</p>
+              <p><strong>↑ ↓</strong> or <strong>W S</strong> - Jump 3 nodes</p>
+              <p><strong>Enter</strong> or <strong>Space</strong> - Expand</p>
+              <p><strong>1-9</strong> - Jump to node #</p>
+            </>
+          )}
+          <hr className="paper-divider my-2" />
+          <p><strong>H</strong> - Hide UI</p>
+          <p><strong>F</strong> - {freeNavigation ? "Guided mode" : "Free roam"}</p>
+          <p><strong>ESC</strong> - {freeNavigation ? "Exit mouse look" : "Overview"}</p>
         </div>
       </div>
 

@@ -41,12 +41,20 @@ server/
 - **Visual Feedback**: Hover/selection states, floating animation, colored by room
 
 ## Controls
+### Guided Mode (default)
 - **Arrow Keys / WASD**: Navigate between memory nodes
 - **1-9 Number Keys**: Jump directly to specific nodes
 - **Enter / Space**: Expand and read node content
 - **ESC**: Return to overview
-- **Click on nodes**: Select and view content
-- **Prev/Next buttons**: Navigate between nodes in HUD
+
+### Free Roam Mode
+- **WASD**: Move freely in any direction
+- **Mouse**: Look around (click to enable)
+- **ESC**: Exit mouse look
+
+### Mode Toggles
+- **H**: Hide/show UI
+- **F**: Toggle between guided and free roam modes
 
 ## Tech Stack
 - React + TypeScript
