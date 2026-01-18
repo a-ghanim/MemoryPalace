@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMemoryPalace, PALACE_TEMPLATES, PalaceTemplate } from "@/lib/stores/useMemoryPalace";
 
 export default function ContentInput() {
@@ -6,6 +7,15 @@ export default function ContentInput() {
   const generatePalace = useMemoryPalace((state) => state.generatePalace);
   const selectedTemplate = useMemoryPalace((state) => state.selectedTemplate);
   const setTemplate = useMemoryPalace((state) => state.setTemplate);
+  const savedPalaces = useMemoryPalace((state) => state.savedPalaces);
+  const fetchSavedPalaces = useMemoryPalace((state) => state.fetchSavedPalaces);
+  const loadPalace = useMemoryPalace((state) => state.loadPalace);
+  const deletePalace = useMemoryPalace((state) => state.deletePalace);
+  const isLoading = useMemoryPalace((state) => state.isLoading);
+
+  useEffect(() => {
+    fetchSavedPalaces();
+  }, [fetchSavedPalaces]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,13 +47,53 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
     library: "📚",
   };
 
+  const handleDeletePalace = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Are you sure you want to delete this palace?")) {
+      await deletePalace(id);
+    }
+  };
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-auto py-8">
-      <div className="w-full max-w-2xl mx-4 p-8 bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/20">
+      <div className="w-full max-w-3xl mx-4 p-8 bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Memory Palace</h1>
           <p className="text-purple-300">Transform your content into a navigable 3D space</p>
         </div>
+
+        {savedPalaces.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-purple-200 mb-3">Your Saved Palaces</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+              {savedPalaces.map((palace) => (
+                <button
+                  key={palace.id}
+                  onClick={() => loadPalace(palace.id)}
+                  disabled={isLoading}
+                  className="flex items-center justify-between p-3 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg border border-slate-600 transition-colors group text-left"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg">{templateIcons[palace.template as PalaceTemplate] || "🏛️"}</span>
+                    <div className="min-w-0">
+                      <div className="text-white text-sm font-medium truncate">{palace.name}</div>
+                      <div className="text-slate-400 text-xs">
+                        {new Date(palace.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => handleDeletePalace(palace.id, e)}
+                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                    title="Delete palace"
+                  >
+                    ✕
+                  </button>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -101,10 +151,10 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
             </button>
             <button
               type="submit"
-              disabled={!inputContent.trim()}
+              disabled={!inputContent.trim() || isLoading}
               className="flex-1 py-3 px-6 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
             >
-              Build Palace
+              {isLoading ? "Loading..." : "Build Palace"}
             </button>
           </div>
         </form>

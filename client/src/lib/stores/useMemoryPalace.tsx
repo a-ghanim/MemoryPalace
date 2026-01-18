@@ -120,6 +120,17 @@ export interface Room {
 
 export type AppPhase = "input" | "exploring";
 
+export interface SavedPalace {
+  id: number;
+  name: string;
+  template: string;
+  inputContent: string;
+  rooms: Room[];
+  nodes: MemoryNode[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface MemoryPalaceState {
   phase: AppPhase;
   nodes: MemoryNode[];
@@ -127,15 +138,24 @@ interface MemoryPalaceState {
   selectedNodeId: string | null;
   inputContent: string;
   selectedTemplate: PalaceTemplate;
+  currentPalaceId: number | null;
+  palaceName: string;
+  savedPalaces: SavedPalace[];
+  isLoading: boolean;
 
   setPhase: (phase: AppPhase) => void;
   setInputContent: (content: string) => void;
   setTemplate: (template: PalaceTemplate) => void;
+  setPalaceName: (name: string) => void;
   generatePalace: () => void;
   selectNode: (id: string | null) => void;
   updateNodeContent: (id: string, content: string) => void;
   reset: () => void;
   getTemplateConfig: () => TemplateConfig;
+  savePalace: () => Promise<void>;
+  loadPalace: (id: number) => Promise<void>;
+  deletePalace: (id: number) => Promise<void>;
+  fetchSavedPalaces: () => Promise<void>;
 }
 
 function generateId(): string {
@@ -335,12 +355,18 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
     selectedNodeId: null,
     inputContent: "",
     selectedTemplate: "mansion" as PalaceTemplate,
+    currentPalaceId: null,
+    palaceName: "",
+    savedPalaces: [],
+    isLoading: false,
 
     setPhase: (phase) => set({ phase }),
 
     setInputContent: (content) => set({ inputContent: content }),
 
     setTemplate: (template) => set({ selectedTemplate: template }),
+
+    setPalaceName: (name) => set({ palaceName: name }),
 
     getTemplateConfig: () => PALACE_TEMPLATES[get().selectedTemplate],
 
@@ -402,6 +428,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         nodes,
         phase: "exploring",
         selectedNodeId: null,
+        currentPalaceId: null,
       });
     },
 
@@ -425,6 +452,111 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         selectedNodeId: null,
         inputContent: "",
         selectedTemplate: "mansion",
+        currentPalaceId: null,
+        palaceName: "",
       }),
+
+    savePalace: async () => {
+      const { nodes, rooms, inputContent, selectedTemplate, palaceName, currentPalaceId } = get();
+      
+      if (nodes.length === 0 || rooms.length === 0) return;
+      
+      set({ isLoading: true });
+      
+      try {
+        const name = palaceName.trim() || `Palace ${new Date().toLocaleDateString()}`;
+        const palaceData = {
+          name,
+          template: selectedTemplate,
+          inputContent,
+          rooms,
+          nodes,
+        };
+
+        let response;
+        if (currentPalaceId) {
+          response = await fetch(`/api/palaces/${currentPalaceId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(palaceData),
+          });
+        } else {
+          response = await fetch("/api/palaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(palaceData),
+          });
+        }
+
+        if (!response.ok) throw new Error("Failed to save palace");
+
+        const saved = await response.json();
+        set({ currentPalaceId: saved.id, palaceName: saved.name });
+        
+        await get().fetchSavedPalaces();
+      } catch (error) {
+        console.error("Error saving palace:", error);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    loadPalace: async (id: number) => {
+      set({ isLoading: true });
+      
+      try {
+        const response = await fetch(`/api/palaces/${id}`);
+        if (!response.ok) throw new Error("Failed to load palace");
+
+        const palace = await response.json();
+        
+        set({
+          nodes: palace.nodes,
+          rooms: palace.rooms,
+          inputContent: palace.inputContent,
+          selectedTemplate: palace.template as PalaceTemplate,
+          currentPalaceId: palace.id,
+          palaceName: palace.name,
+          phase: "exploring",
+          selectedNodeId: null,
+        });
+      } catch (error) {
+        console.error("Error loading palace:", error);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    deletePalace: async (id: number) => {
+      set({ isLoading: true });
+      
+      try {
+        const response = await fetch(`/api/palaces/${id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error("Failed to delete palace");
+        
+        const { currentPalaceId } = get();
+        if (currentPalaceId === id) {
+          set({ currentPalaceId: null });
+        }
+        
+        await get().fetchSavedPalaces();
+      } catch (error) {
+        console.error("Error deleting palace:", error);
+      } finally {
+        set({ isLoading: false });
+      }
+    },
+
+    fetchSavedPalaces: async () => {
+      try {
+        const response = await fetch("/api/palaces");
+        if (!response.ok) throw new Error("Failed to fetch palaces");
+        
+        const palaces = await response.json();
+        set({ savedPalaces: palaces });
+      } catch (error) {
+        console.error("Error fetching palaces:", error);
+      }
+    },
   }))
 );
