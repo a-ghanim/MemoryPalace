@@ -1,10 +1,10 @@
 export default function Lights() {
   return (
     <>
-      <ambientLight intensity={0.2} />
+      <ambientLight intensity={0.6} />
       <directionalLight
         position={[10, 20, 10]}
-        intensity={0.5}
+        intensity={1.2}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -16,8 +16,8 @@ export default function Lights() {
       />
       <hemisphereLight
         color="#b1e1ff"
-        groundColor="#6a5acd"
-        intensity={0.3}
+        groundColor="#8B7FCF"
+        intensity={0.8}
       />
     </>
   );

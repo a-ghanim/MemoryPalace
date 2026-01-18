@@ -7,7 +7,7 @@ function Floor() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[100, 100]} />
-      <meshStandardMaterial color="#1a1a2e" />
+      <meshStandardMaterial color="#3d3d5c" />
     </mesh>
   );
 }
@@ -18,7 +18,7 @@ function RoomStructure({ room, index }: { room: Room; index: number }) {
   const [x, , z] = room.position;
 
   const wallColor = useMemo(() => {
-    const colors = ["#2d3436", "#636e72", "#4a4a4a", "#3d3d3d"];
+    const colors = ["#5a5a7a", "#6a6a8a", "#7575a3", "#6868a0"];
     return colors[index % colors.length];
   }, [index]);
 
@@ -46,13 +46,13 @@ function RoomStructure({ room, index }: { room: Room; index: number }) {
 
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
         <planeGeometry args={[roomSize, roomSize]} />
-        <meshStandardMaterial color="#2a2a4a" />
+        <meshStandardMaterial color="#4a4a6a" />
       </mesh>
 
       <pointLight
         position={[0, 3, 0]}
-        intensity={0.8}
-        distance={12}
+        intensity={1.5}
+        distance={15}
         color="#ffd700"
         castShadow
       />
