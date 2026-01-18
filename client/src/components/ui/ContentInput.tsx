@@ -176,16 +176,16 @@ Recursion is when a function calls itself, useful for problems that can be broke
 
   return (
     <div 
-      className="fixed inset-0 flex items-center justify-center overflow-auto py-16 px-8" 
+      className="fixed inset-0 overflow-auto" 
       style={{ 
         backgroundColor: '#f5f0e1',
-        backgroundImage: 'radial-gradient(circle, #ccc 1px, transparent 1px)',
-        backgroundSize: '20px 20px'
+        backgroundImage: 'radial-gradient(circle, #bbb 1.5px, transparent 1.5px)',
+        backgroundSize: '24px 24px'
       }}
     >
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       
-      <div className="fixed top-4 right-4 z-50">
+      <div className="fixed top-6 right-6 z-50">
         {user ? (
           <div className="flex items-center gap-3 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">
             <span className="paper-text text-sm" style={{ color: '#666' }}>
@@ -210,7 +210,8 @@ Recursion is when a function calls itself, useful for problems that can be broke
         )}
       </div>
       
-      <div className="w-full max-w-3xl mx-4 p-8 paper-card">
+      <div className="w-full max-w-3xl mx-auto mt-20 mb-12 px-8">
+        <div className="p-8 paper-card">
         <div className="text-center mb-8">
           <h1 className="text-5xl paper-title mb-2">Memory Palace</h1>
           <p className="paper-text text-lg" style={{ color: '#666' }}>
@@ -355,6 +356,7 @@ Recursion is when a function calls itself, useful for problems that can be broke
         <div className="text-center paper-text" style={{ color: '#666' }}>
           <p>Your content will be split into memory nodes placed throughout a 3D palace.</p>
           <p className="mt-1">Navigate with WASD keys and mouse to explore your memories.</p>
+        </div>
         </div>
       </div>
     </div>
