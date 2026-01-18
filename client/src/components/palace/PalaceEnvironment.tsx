@@ -670,6 +670,725 @@ function AncientTree() {
   );
 }
 
+// ============ MANSION DECORATIONS ============
+
+function CrystalChandelier({ position }: { position: [number, number, number] }) {
+  const chandelierRef = useRef<THREE.Group>(null);
+  const offset = useMemo(() => Math.random() * 100, []);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime + offset;
+    if (chandelierRef.current) {
+      chandelierRef.current.rotation.y = time * 0.1;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.15, 0.8, 8]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+      </mesh>
+      
+      <group ref={chandelierRef} position={[0, -0.5, 0]}>
+        <mesh castShadow>
+          <torusGeometry args={[1.2, 0.08, 8, 24]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <mesh position={[0, 0.15, 0]} castShadow>
+          <torusGeometry args={[0.7, 0.06, 8, 24]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+        </mesh>
+
+        {Array.from({ length: 8 }).map((_, i) => {
+          const angle = (i / 8) * Math.PI * 2;
+          return (
+            <mesh key={i} position={[Math.cos(angle) * 1.2, -0.3, Math.sin(angle) * 1.2]} castShadow>
+              <octahedronGeometry args={[0.15]} />
+              <meshStandardMaterial
+                color="#ffffff"
+                emissive="#ffffcc"
+                emissiveIntensity={3}
+                metalness={0.9}
+                roughness={0}
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+          );
+        })}
+
+        {Array.from({ length: 6 }).map((_, i) => {
+          const angle = (i / 6) * Math.PI * 2;
+          return (
+            <mesh key={`inner-${i}`} position={[Math.cos(angle) * 0.7, -0.15, Math.sin(angle) * 0.7]} castShadow>
+              <octahedronGeometry args={[0.1]} />
+              <meshStandardMaterial
+                color="#ffffff"
+                emissive="#ffffcc"
+                emissiveIntensity={1.5}
+                metalness={0.9}
+                roughness={0}
+                transparent
+                opacity={0.85}
+              />
+            </mesh>
+          );
+        })}
+
+        <mesh position={[0, -0.4, 0]} castShadow>
+          <octahedronGeometry args={[0.25]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            emissive="#ffffee"
+            emissiveIntensity={2.5}
+            metalness={0.9}
+            roughness={0}
+            transparent
+            opacity={0.9}
+          />
+        </mesh>
+      </group>
+      
+      <pointLight position={[0, -0.5, 0]} intensity={3} distance={20} color="#ffffee" decay={2} />
+    </group>
+  );
+}
+
+function VelvetCurtain({ position, rotation = 0, height = 6, color = "#8b0000" }: { position: [number, number, number]; rotation?: number; height?: number; color?: string }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3, height, 0.15]} />
+        <meshStandardMaterial color={color} roughness={0.9} metalness={0} />
+      </mesh>
+      
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={i} position={[(i - 3.5) * 0.38, height / 2, 0.1]} castShadow>
+          <cylinderGeometry args={[0.12, 0.12, height - 0.5, 8]} />
+          <meshStandardMaterial color={color} roughness={0.85} metalness={0} />
+        </mesh>
+      ))}
+      
+      <mesh position={[0, height + 0.15, 0]} castShadow>
+        <boxGeometry args={[3.4, 0.3, 0.35]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.25} />
+      </mesh>
+      
+      <mesh position={[-1.6, height - 1.5, 0.2]} castShadow>
+        <torusGeometry args={[0.25, 0.05, 8, 16]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+      </mesh>
+      <mesh position={[1.6, height - 1.5, 0.2]} castShadow>
+        <torusGeometry args={[0.25, 0.05, 8, 16]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+function OrnateMirror({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[2.5, 3.5, 0.2]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.25} />
+      </mesh>
+      
+      <mesh position={[0, 0, 0.12]}>
+        <boxGeometry args={[2, 3, 0.05]} />
+        <meshStandardMaterial color="#aaccee" metalness={0.95} roughness={0.05} />
+      </mesh>
+      
+      <mesh position={[0, 2, 0.15]} castShadow>
+        <boxGeometry args={[0.8, 0.4, 0.15]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.25} />
+      </mesh>
+    </group>
+  );
+}
+
+function ElegantChaise({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2, 0.5, 0.8]} />
+        <meshStandardMaterial color="#8b0000" roughness={0.85} metalness={0} />
+      </mesh>
+      
+      <mesh position={[-0.8, 0.7, 0]} rotation={[0, 0, Math.PI / 6]} castShadow>
+        <boxGeometry args={[0.5, 0.8, 0.7]} />
+        <meshStandardMaterial color="#8b0000" roughness={0.85} metalness={0} />
+      </mesh>
+      
+      {[[-0.85, -0.4], [0.85, -0.4], [-0.85, 0.3], [0.85, 0.3]].map((pos, i) => (
+        <mesh key={i} position={[pos[0], 0.1, pos[1]]} castShadow>
+          <cylinderGeometry args={[0.06, 0.08, 0.25, 8]} />
+          <meshStandardMaterial color="#5a3a20" metalness={0.3} roughness={0.6} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ============ MUSEUM DECORATIONS ============
+
+function DisplayCase({ position, rotation = 0, artifactType = "vase" }: { position: [number, number, number]; rotation?: number; artifactType?: "vase" | "statue" | "scroll" | "gem" }) {
+  const artifactRef = useRef<THREE.Mesh>(null);
+  const offset = useMemo(() => Math.random() * 100, []);
+
+  useFrame((state) => {
+    if (artifactRef.current && artifactType === "gem") {
+      artifactRef.current.rotation.y = state.clock.elapsedTime * 0.5 + offset;
+    }
+  });
+
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.2, 0.8, 1.2]} />
+        <meshStandardMaterial color="#5a4a3a" metalness={0.3} roughness={0.5} />
+      </mesh>
+      
+      <mesh position={[0, 1.2, 0]}>
+        <boxGeometry args={[1, 1.2, 1]} />
+        <meshStandardMaterial color="#ffffff" transparent opacity={0.15} metalness={0.9} roughness={0} />
+      </mesh>
+      
+      <mesh position={[0, 0.82, 0]} castShadow>
+        <boxGeometry args={[0.9, 0.04, 0.9]} />
+        <meshStandardMaterial color="#4a3a2a" metalness={0.4} roughness={0.4} />
+      </mesh>
+      
+      {artifactType === "vase" && (
+        <group position={[0, 1.1, 0]}>
+          <mesh ref={artifactRef} castShadow>
+            <cylinderGeometry args={[0.15, 0.25, 0.5, 16]} />
+            <meshStandardMaterial color="#cd853f" metalness={0.2} roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 0.35, 0]} castShadow>
+            <cylinderGeometry args={[0.2, 0.15, 0.2, 16]} />
+            <meshStandardMaterial color="#cd853f" metalness={0.2} roughness={0.6} />
+          </mesh>
+        </group>
+      )}
+      
+      {artifactType === "statue" && (
+        <group position={[0, 1.05, 0]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.15, 0.2, 0.3, 12]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.1} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.25, 0]} castShadow>
+            <sphereGeometry args={[0.12, 16, 16]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.1} roughness={0.4} />
+          </mesh>
+        </group>
+      )}
+      
+      {artifactType === "gem" && (
+        <mesh ref={artifactRef} position={[0, 1.1, 0]} castShadow>
+          <octahedronGeometry args={[0.2]} />
+          <meshStandardMaterial
+            color="#4488ff"
+            emissive="#2244aa"
+            emissiveIntensity={0.5}
+            metalness={0.8}
+            roughness={0.1}
+            transparent
+            opacity={0.85}
+          />
+        </mesh>
+      )}
+      
+      {artifactType === "scroll" && (
+        <group position={[0, 1, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <mesh castShadow>
+            <cylinderGeometry args={[0.08, 0.08, 0.5, 12]} />
+            <meshStandardMaterial color="#f4e4c4" roughness={0.9} />
+          </mesh>
+          <mesh position={[0.28, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.1, 0.1, 0.08, 12]} />
+            <meshStandardMaterial color="#8b4513" roughness={0.7} />
+          </mesh>
+          <mesh position={[-0.28, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.1, 0.1, 0.08, 12]} />
+            <meshStandardMaterial color="#8b4513" roughness={0.7} />
+          </mesh>
+        </group>
+      )}
+      
+    </group>
+  );
+}
+
+function AncientStatue({ position, rotation = 0, type = "greek" }: { position: [number, number, number]; rotation?: number; type?: "greek" | "egyptian" | "roman" }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.4, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.5, 0.8, 1.5]} />
+        <meshStandardMaterial color="#7a6a5a" metalness={0.2} roughness={0.6} />
+      </mesh>
+      
+      {type === "greek" && (
+        <group position={[0, 0.8, 0]}>
+          <mesh position={[0, 1, 0]} castShadow>
+            <cylinderGeometry args={[0.3, 0.4, 2, 16]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.05} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 2.3, 0]} castShadow>
+            <sphereGeometry args={[0.25, 16, 16]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.05} roughness={0.5} />
+          </mesh>
+          <mesh position={[-0.35, 1.6, 0]} rotation={[0, 0, Math.PI / 3]} castShadow>
+            <cylinderGeometry args={[0.08, 0.1, 0.8, 8]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.05} roughness={0.5} />
+          </mesh>
+          <mesh position={[0.35, 1.6, 0]} rotation={[0, 0, -Math.PI / 3]} castShadow>
+            <cylinderGeometry args={[0.08, 0.1, 0.8, 8]} />
+            <meshStandardMaterial color="#e8e4e0" metalness={0.05} roughness={0.5} />
+          </mesh>
+        </group>
+      )}
+      
+      {type === "egyptian" && (
+        <group position={[0, 0.8, 0]}>
+          <mesh position={[0, 1.2, 0]} castShadow>
+            <boxGeometry args={[0.6, 2.4, 0.4]} />
+            <meshStandardMaterial color="#daa520" metalness={0.4} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 2.6, 0]} castShadow>
+            <boxGeometry args={[0.5, 0.4, 0.35]} />
+            <meshStandardMaterial color="#daa520" metalness={0.4} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 2.95, 0]} castShadow>
+            <coneGeometry args={[0.35, 0.5, 4]} />
+            <meshStandardMaterial color="#daa520" metalness={0.5} roughness={0.3} />
+          </mesh>
+        </group>
+      )}
+      
+      {type === "roman" && (
+        <group position={[0, 0.8, 0]}>
+          <mesh position={[0, 0.8, 0]} castShadow>
+            <cylinderGeometry args={[0.35, 0.45, 1.6, 16]} />
+            <meshStandardMaterial color="#d4ccc4" metalness={0.1} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 1.8, 0]} castShadow>
+            <sphereGeometry args={[0.3, 16, 16]} />
+            <meshStandardMaterial color="#d4ccc4" metalness={0.1} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 2.2, 0]} castShadow>
+            <cylinderGeometry args={[0.45, 0.35, 0.3, 16]} />
+            <meshStandardMaterial color="#8b7355" metalness={0.3} roughness={0.5} />
+          </mesh>
+        </group>
+      )}
+      
+      <spotLight position={[0, 5, 2]} angle={0.3} penumbra={0.5} intensity={2} distance={15} color="#ffffee" castShadow target-position={[position[0], 1, position[2]]} />
+    </group>
+  );
+}
+
+function MuseumBench({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2, 0.12, 0.6]} />
+        <meshStandardMaterial color="#5a4a3a" metalness={0.2} roughness={0.6} />
+      </mesh>
+      
+      {[[-0.8, 0], [0.8, 0]].map((pos, i) => (
+        <mesh key={i} position={[pos[0], 0.15, pos[1]]} castShadow>
+          <boxGeometry args={[0.15, 0.35, 0.5]} />
+          <meshStandardMaterial color="#4a3a2a" metalness={0.2} roughness={0.6} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ============ GARDEN DECORATIONS ============
+
+function FlowerBed({ position, rotation = 0, flowerColor = "#ff69b4" }: { position: [number, number, number]; rotation?: number; flowerColor?: string }) {
+  const flowersRef = useRef<THREE.Group>(null);
+  
+  const flowers = useMemo(() => {
+    return Array.from({ length: 12 }).map((_, i) => ({
+      x: (Math.sin(i * 137.5 * Math.PI / 180) * 0.7 * (i % 3 + 1) / 3),
+      z: (Math.cos(i * 137.5 * Math.PI / 180) * 0.7 * (i % 3 + 1) / 3),
+      height: 0.3 + (i % 4) * 0.15,
+      offset: i * 0.5
+    }));
+  }, []);
+
+  useFrame((state) => {
+    if (flowersRef.current) {
+      flowersRef.current.children.forEach((flower, i) => {
+        flower.rotation.z = Math.sin(state.clock.elapsedTime * 2 + i) * 0.05;
+      });
+    }
+  });
+
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[1, 1.1, 0.25, 12]} />
+        <meshStandardMaterial color="#654321" roughness={0.95} />
+      </mesh>
+      
+      <mesh position={[0, 0.15, 0]}>
+        <cylinderGeometry args={[0.9, 0.95, 0.15, 12]} />
+        <meshStandardMaterial color="#3d2817" roughness={1} />
+      </mesh>
+      
+      <group ref={flowersRef}>
+        {flowers.map((f, i) => (
+          <group key={i} position={[f.x, 0.2, f.z]}>
+            <mesh castShadow>
+              <cylinderGeometry args={[0.02, 0.02, f.height, 6]} />
+              <meshStandardMaterial color="#228b22" roughness={0.9} />
+            </mesh>
+            <mesh position={[0, f.height / 2 + 0.08, 0]} castShadow>
+              <sphereGeometry args={[0.08, 8, 8]} />
+              <meshStandardMaterial color={flowerColor} emissive={flowerColor} emissiveIntensity={0.2} roughness={0.7} />
+            </mesh>
+          </group>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+function GardenBench({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.45, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.8, 0.1, 0.5]} />
+        <meshStandardMaterial color="#8b7355" roughness={0.8} />
+      </mesh>
+      
+      <mesh position={[0, 0.75, -0.2]} castShadow>
+        <boxGeometry args={[1.8, 0.5, 0.08]} />
+        <meshStandardMaterial color="#8b7355" roughness={0.8} />
+      </mesh>
+      
+      {[[-0.75, 0], [0.75, 0]].map((pos, i) => (
+        <mesh key={i} position={[pos[0], 0.2, pos[1]]} castShadow>
+          <boxGeometry args={[0.1, 0.45, 0.4]} />
+          <meshStandardMaterial color="#5a4a3a" roughness={0.9} />
+        </mesh>
+      ))}
+      
+      {[[-0.8, 0.6], [0.8, 0.6]].map((pos, i) => (
+        <mesh key={`arm-${i}`} position={[pos[0], pos[1], 0]} castShadow>
+          <boxGeometry args={[0.08, 0.25, 0.45]} />
+          <meshStandardMaterial color="#5a4a3a" roughness={0.9} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function Topiary({ position, shape = "sphere" }: { position: [number, number, number]; shape?: "sphere" | "cone" | "spiral" }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.25, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.5, 0.6, 0.5, 12]} />
+        <meshStandardMaterial color="#5a4a3a" roughness={0.9} />
+      </mesh>
+      
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.2, 1, 8]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.95} />
+      </mesh>
+      
+      {shape === "sphere" && (
+        <mesh position={[0, 1.8, 0]} castShadow>
+          <sphereGeometry args={[0.7, 16, 16]} />
+          <meshStandardMaterial color="#228b22" roughness={0.85} />
+        </mesh>
+      )}
+      
+      {shape === "cone" && (
+        <mesh position={[0, 2, 0]} castShadow>
+          <coneGeometry args={[0.6, 1.8, 12]} />
+          <meshStandardMaterial color="#228b22" roughness={0.85} />
+        </mesh>
+      )}
+      
+      {shape === "spiral" && (
+        <group>
+          {[0, 0.5, 1, 1.5].map((y, i) => (
+            <mesh key={i} position={[0, 1.4 + y * 0.5, 0]} castShadow>
+              <sphereGeometry args={[0.5 - i * 0.1, 12, 12]} />
+              <meshStandardMaterial color="#228b22" roughness={0.85} />
+            </mesh>
+          ))}
+        </group>
+      )}
+    </group>
+  );
+}
+
+function BirdBath({ position }: { position: [number, number, number] }) {
+  const waterRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (waterRef.current) {
+      const material = waterRef.current.material as THREE.MeshStandardMaterial;
+      material.emissiveIntensity = 0.1 + Math.sin(state.clock.elapsedTime * 2) * 0.05;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.6, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.15, 0.3, 1.2, 12]} />
+        <meshStandardMaterial color="#a0a0a0" roughness={0.6} />
+      </mesh>
+      
+      <mesh position={[0, 1.25, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.6, 0.5, 0.15, 24]} />
+        <meshStandardMaterial color="#a0a0a0" roughness={0.6} />
+      </mesh>
+      
+      <mesh ref={waterRef} position={[0, 1.35, 0]}>
+        <cylinderGeometry args={[0.55, 0.55, 0.08, 24]} />
+        <meshStandardMaterial color="#4488aa" metalness={0.8} roughness={0.1} transparent opacity={0.7} emissive="#336688" emissiveIntensity={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
+function GardenButterflies({ position }: { position: [number, number, number] }) {
+  const butterfliesRef = useRef<THREE.Group>(null);
+  
+  const butterflies = useMemo(() => {
+    return Array.from({ length: 5 }).map((_, i) => ({
+      offset: i * 1.5,
+      radius: 2 + (i % 3),
+      height: 1.5 + (i % 4) * 0.5,
+      color: ["#ff69b4", "#ffa500", "#ffff00", "#87ceeb", "#dda0dd"][i]
+    }));
+  }, []);
+
+  useFrame((state) => {
+    if (butterfliesRef.current) {
+      butterfliesRef.current.children.forEach((butterfly, i) => {
+        const b = butterflies[i];
+        const time = state.clock.elapsedTime + b.offset;
+        butterfly.position.x = Math.cos(time * 0.5) * b.radius;
+        butterfly.position.z = Math.sin(time * 0.7) * b.radius;
+        butterfly.position.y = b.height + Math.sin(time * 2) * 0.5;
+        butterfly.rotation.y = time * 0.5 + Math.PI / 2;
+      });
+    }
+  });
+
+  return (
+    <group position={position} ref={butterfliesRef}>
+      {butterflies.map((b, i) => (
+        <group key={i}>
+          <mesh castShadow>
+            <sphereGeometry args={[0.03, 8, 8]} />
+            <meshStandardMaterial color="#333333" />
+          </mesh>
+          <mesh position={[-0.08, 0, 0]} rotation={[0, 0, Math.PI / 6]}>
+            <planeGeometry args={[0.15, 0.1]} />
+            <meshStandardMaterial color={b.color} side={THREE.DoubleSide} transparent opacity={0.9} emissive={b.color} emissiveIntensity={0.3} />
+          </mesh>
+          <mesh position={[0.08, 0, 0]} rotation={[0, 0, -Math.PI / 6]}>
+            <planeGeometry args={[0.15, 0.1]} />
+            <meshStandardMaterial color={b.color} side={THREE.DoubleSide} transparent opacity={0.9} emissive={b.color} emissiveIntensity={0.3} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ============ LIBRARY DECORATIONS ============
+
+function ToweringBookshelf({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  const bookColors = useMemo(() => {
+    const colors = ["#8b0000", "#654321", "#1a1a5c", "#2f4f4f", "#8b4513", "#4a0404", "#2e2e38", "#3d2817"];
+    return Array.from({ length: 30 }).map(() => colors[Math.floor(Math.random() * colors.length)]);
+  }, []);
+
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 3, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.5, 6, 0.5]} />
+        <meshStandardMaterial color="#5a3a20" roughness={0.8} />
+      </mesh>
+      
+      {[0.5, 2, 3.5, 5].map((y, shelfIndex) => (
+        <group key={shelfIndex}>
+          <mesh position={[0, y, 0.1]} castShadow>
+            <boxGeometry args={[2.4, 0.08, 0.45]} />
+            <meshStandardMaterial color="#4a2a15" roughness={0.7} />
+          </mesh>
+          
+          {Array.from({ length: 7 }).map((_, i) => {
+            const height = 0.8 + (Math.sin(shelfIndex * 5 + i * 3) * 0.3);
+            return (
+              <mesh key={i} position={[-1 + i * 0.32, y + height / 2 + 0.04, 0.1]} castShadow>
+                <boxGeometry args={[0.25, height, 0.35]} />
+                <meshStandardMaterial color={bookColors[shelfIndex * 7 + i]} roughness={0.9} />
+              </mesh>
+            );
+          })}
+        </group>
+      ))}
+      
+      <mesh position={[0, 6.1, 0.05]} castShadow>
+        <boxGeometry args={[2.6, 0.2, 0.55]} />
+        <meshStandardMaterial color="#3a2010" roughness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+function ReadingDesk({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.8, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.4, 0.08, 0.9]} />
+        <meshStandardMaterial color="#5a3a20" roughness={0.7} />
+      </mesh>
+      
+      {[[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]].map((pos, i) => (
+        <mesh key={i} position={[pos[0], 0.38, pos[1]]} castShadow>
+          <boxGeometry args={[0.08, 0.8, 0.08]} />
+          <meshStandardMaterial color="#4a2a15" roughness={0.8} />
+        </mesh>
+      ))}
+      
+      <mesh position={[0, 0.9, 0.1]} rotation={[0.15, 0, 0]} castShadow>
+        <boxGeometry args={[0.7, 0.02, 0.5]} />
+        <meshStandardMaterial color="#f4e4c4" roughness={0.9} />
+      </mesh>
+      
+      <mesh position={[0.4, 0.88, -0.25]} castShadow>
+        <cylinderGeometry args={[0.04, 0.06, 0.12, 8]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+function FloatingBooks({ position }: { position: [number, number, number] }) {
+  const booksRef = useRef<THREE.Group>(null);
+  
+  const books = useMemo(() => {
+    const colors = ["#8b0000", "#654321", "#1a1a5c", "#2f4f4f", "#8b4513"];
+    return Array.from({ length: 6 }).map((_, i) => ({
+      offset: i * 0.8,
+      radius: 1.5 + (i % 3) * 0.5,
+      height: 3 + (i % 4) * 0.5,
+      color: colors[i % colors.length],
+      rotSpeed: 0.2 + (i % 3) * 0.1
+    }));
+  }, []);
+
+  useFrame((state) => {
+    if (booksRef.current) {
+      booksRef.current.children.forEach((book, i) => {
+        const b = books[i];
+        const time = state.clock.elapsedTime + b.offset;
+        book.position.x = Math.cos(time * 0.3) * b.radius;
+        book.position.z = Math.sin(time * 0.4) * b.radius;
+        book.position.y = b.height + Math.sin(time * 0.8) * 0.3;
+        book.rotation.y = time * b.rotSpeed;
+        book.rotation.x = Math.sin(time * 0.5) * 0.2;
+      });
+    }
+  });
+
+  return (
+    <group position={position} ref={booksRef}>
+      {books.map((b, i) => (
+        <mesh key={i} castShadow>
+          <boxGeometry args={[0.3, 0.4, 0.08]} />
+          <meshStandardMaterial 
+            color={b.color} 
+            roughness={0.9}
+            emissive={b.color}
+            emissiveIntensity={0.1}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function CandleSconce({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  const flameRef = useRef<THREE.Mesh>(null);
+  const offset = useMemo(() => Math.random() * 100, []);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime + offset;
+    if (flameRef.current) {
+      flameRef.current.scale.y = 1 + Math.sin(time * 10) * 0.2;
+      flameRef.current.scale.x = 1 + Math.cos(time * 8) * 0.1;
+    }
+  });
+
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[0.2, 0.1, 0.15]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.3} />
+      </mesh>
+      
+      <mesh position={[0, 0.15, 0]} castShadow>
+        <cylinderGeometry args={[0.04, 0.05, 0.25, 8]} />
+        <meshStandardMaterial color="#f5f5dc" roughness={0.9} />
+      </mesh>
+      
+      <mesh ref={flameRef} position={[0, 0.35, 0]}>
+        <coneGeometry args={[0.025, 0.08, 6]} />
+        <meshStandardMaterial color="#ff9944" emissive="#ff6622" emissiveIntensity={2} transparent opacity={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+function StudyGlobe({ position }: { position: [number, number, number] }) {
+  const globeRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (globeRef.current) {
+      globeRef.current.rotation.y = state.clock.elapsedTime * 0.1;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.3, 0.4, 1, 12]} />
+        <meshStandardMaterial color="#5a3a20" roughness={0.7} />
+      </mesh>
+      
+      <mesh position={[0, 1.1, 0]} castShadow>
+        <torusGeometry args={[0.5, 0.03, 8, 32]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.3} />
+      </mesh>
+      
+      <mesh ref={globeRef} position={[0, 1.1, 0]} castShadow>
+        <sphereGeometry args={[0.45, 24, 24]} />
+        <meshStandardMaterial color="#4a8055" metalness={0.2} roughness={0.6} />
+      </mesh>
+      
+      <mesh position={[0, 1.1, 0]}>
+        <sphereGeometry args={[0.46, 16, 16]} />
+        <meshStandardMaterial color="#3388bb" transparent opacity={0.25} metalness={0.8} roughness={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
 function GrandRotunda({ config }: { config: TemplateConfig }) {
   return (
     <group position={[0, 0, 0]}>
@@ -766,25 +1485,6 @@ function Bookshelf({ position, rotation, height = 5 }: { position: [number, numb
   );
 }
 
-function DisplayCase({ position, rotation }: { position: [number, number, number]; rotation: number }) {
-  return (
-    <group position={position} rotation={[0, rotation, 0]}>
-      <mesh position={[0, 0.4, 0]} castShadow>
-        <boxGeometry args={[1.2, 0.8, 0.8]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.3} metalness={0.5} />
-      </mesh>
-      <mesh position={[0, 1.2, 0]}>
-        <boxGeometry args={[1, 1.2, 0.6]} />
-        <meshStandardMaterial color="#ffffff" transparent opacity={0.2} roughness={0} metalness={0.9} />
-      </mesh>
-      <mesh position={[0, 1, 0]}>
-        <cylinderGeometry args={[0.15, 0.2, 0.6, 8]} />
-        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.2} emissive="#c9a227" emissiveIntensity={0.3} />
-      </mesh>
-      <pointLight position={[0, 1.5, 0]} intensity={0.5} distance={4} color="#ffffee" />
-    </group>
-  );
-}
 
 function GardenTree({ position }: { position: [number, number, number] }) {
   return (
@@ -805,33 +1505,6 @@ function GardenTree({ position }: { position: [number, number, number] }) {
   );
 }
 
-function FlowerBed({ position, rotation }: { position: [number, number, number]; rotation: number }) {
-  const colors = ["#ff6b8a", "#ffd93d", "#6bcf6b", "#9d65c9", "#ff8c42"];
-  return (
-    <group position={position} rotation={[0, rotation, 0]}>
-      <mesh position={[0, 0.15, 0]} castShadow>
-        <boxGeometry args={[2, 0.3, 1]} />
-        <meshStandardMaterial color="#5d4037" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 0.35, 0]}>
-        <boxGeometry args={[1.8, 0.1, 0.8]} />
-        <meshStandardMaterial color="#3d2817" roughness={1} />
-      </mesh>
-      {Array.from({ length: 8 }).map((_, i) => (
-        <group key={i} position={[-0.7 + (i % 4) * 0.45, 0.4, -0.2 + Math.floor(i / 4) * 0.4]}>
-          <mesh position={[0, 0.15, 0]}>
-            <cylinderGeometry args={[0.02, 0.02, 0.3, 4]} />
-            <meshStandardMaterial color="#228B22" roughness={0.9} />
-          </mesh>
-          <mesh position={[0, 0.35, 0]}>
-            <sphereGeometry args={[0.08, 8, 8]} />
-            <meshStandardMaterial color={colors[i % 5]} emissive={colors[i % 5]} emissiveIntensity={0.2} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
 
 function RoomChamber({ room, index, config }: { room: Room; index: number; config: TemplateConfig }) {
   const [x, , z] = room.position;
@@ -919,31 +1592,81 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
             const angle = ((i + 0.5) / 4) * Math.PI * 2;
             return <FlowerBed key={`flower-${index}-${i}`} position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]} rotation={angle} />;
           })}
+          {[0, Math.PI].map((angle, i) => (
+            <GardenBench key={`bench-${index}-${i}`} position={[Math.cos(angle) * 3, 0, Math.sin(angle) * 3]} rotation={angle + Math.PI / 2} />
+          ))}
+          {[Math.PI / 4, Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI * 7 / 4].map((angle, i) => (
+            <Topiary key={`topiary-${index}-${i}`} position={[Math.cos(angle) * 5.5, 0, Math.sin(angle) * 5.5]} shape={["sphere", "cone", "spiral"][i % 3] as "sphere" | "cone" | "spiral"} />
+          ))}
+          <BirdBath position={[2.5, 0, 2.5]} />
+          <GardenButterflies position={[0, 0, 0]} />
         </>
       )}
 
-      {isLibrary && Array.from({ length: 8 }).map((_, i) => {
-        const angle = (i / 8) * Math.PI * 2;
-        return (
-          <Bookshelf
-            key={`shelf-${index}-${i}`}
-            position={[Math.cos(angle) * (roomRadius - 0.3), 0, Math.sin(angle) * (roomRadius - 0.3)]}
-            rotation={angle + Math.PI}
-            height={wallHeight - 1}
-          />
-        );
-      })}
+      {isLibrary && (
+        <>
+          {Array.from({ length: 8 }).map((_, i) => {
+            const angle = (i / 8) * Math.PI * 2;
+            return (
+              <ToweringBookshelf
+                key={`shelf-${index}-${i}`}
+                position={[Math.cos(angle) * (roomRadius - 0.3), 0, Math.sin(angle) * (roomRadius - 0.3)]}
+                rotation={angle + Math.PI}
+              />
+            );
+          })}
+          {[Math.PI / 4, Math.PI * 5 / 4].map((angle, i) => (
+            <ReadingDesk key={`desk-${index}-${i}`} position={[Math.cos(angle) * 3.5, 0, Math.sin(angle) * 3.5]} rotation={angle} />
+          ))}
+          <FloatingBooks position={[0, 0, 0]} />
+          <StudyGlobe position={[3, 0, 0]} />
+          {Array.from({ length: 4 }).map((_, i) => {
+            const angle = ((i + 0.25) / 4) * Math.PI * 2;
+            return (
+              <CandleSconce key={`candle-${index}-${i}`} position={[Math.cos(angle) * (roomRadius - 0.8), wallHeight - 1, Math.sin(angle) * (roomRadius - 0.8)]} rotation={angle + Math.PI} />
+            );
+          })}
+        </>
+      )}
 
-      {isMuseum && Array.from({ length: 6 }).map((_, i) => {
-        const angle = ((i + 0.5) / 6) * Math.PI * 2;
-        return (
-          <DisplayCase
-            key={`case-${index}-${i}`}
-            position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]}
-            rotation={angle}
-          />
-        );
-      })}
+      {isMuseum && (
+        <>
+          {Array.from({ length: 6 }).map((_, i) => {
+            const angle = ((i + 0.5) / 6) * Math.PI * 2;
+            const artifactTypes: ("vase" | "statue" | "scroll" | "gem")[] = ["vase", "statue", "scroll", "gem", "vase", "statue"];
+            return (
+              <DisplayCase
+                key={`case-${index}-${i}`}
+                position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]}
+                rotation={angle}
+                artifactType={artifactTypes[i]}
+              />
+            );
+          })}
+          {[0, Math.PI * 2 / 3, Math.PI * 4 / 3].map((angle, i) => {
+            const statueTypes: ("greek" | "egyptian" | "roman")[] = ["greek", "egyptian", "roman"];
+            return (
+              <AncientStatue key={`statue-${index}-${i}`} position={[Math.cos(angle) * 2.5, 0, Math.sin(angle) * 2.5]} rotation={angle + Math.PI} type={statueTypes[i]} />
+            );
+          })}
+          <MuseumBench position={[0, 0, -3]} rotation={0} />
+          <MuseumBench position={[0, 0, 3]} rotation={Math.PI} />
+        </>
+      )}
+
+      {isMansion && (
+        <>
+          <CrystalChandelier position={[0, wallHeight - 0.5, 0]} />
+          {[0, Math.PI].map((angle, i) => (
+            <VelvetCurtain key={`curtain-${index}-${i}`} position={[Math.cos(angle) * (roomRadius - 0.2), 0, Math.sin(angle) * (roomRadius - 0.2)]} rotation={angle + Math.PI} height={wallHeight} color="#8b0000" />
+          ))}
+          {[Math.PI / 2, Math.PI * 3 / 2].map((angle, i) => (
+            <OrnateMirror key={`mirror-${index}-${i}`} position={[Math.cos(angle) * (roomRadius - 0.3), wallHeight / 2, Math.sin(angle) * (roomRadius - 0.3)]} rotation={angle + Math.PI} />
+          ))}
+          <ElegantChaise position={[3, 0, 0]} rotation={Math.PI / 2} />
+          <ElegantChaise position={[-3, 0, 0]} rotation={-Math.PI / 2} />
+        </>
+      )}
 
       {config.style.hasDome && !isGarden && (
         <mesh position={[0, wallHeight, 0]}>
