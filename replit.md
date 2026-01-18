@@ -35,17 +35,18 @@ server/
 
 ## Key Features
 - **Content Parsing**: Automatically splits text into paragraphs, sentences, or word chunks
-- **3D Navigation**: WASD movement + mouse look with pointer lock
+- **3D Navigation**: Keyboard-based hop-to-hop navigation between memory nodes
 - **Interactive Nodes**: Click to select, view details, and edit content
 - **Room System**: Multiple themed rooms connected by corridors
 - **Visual Feedback**: Hover/selection states, floating animation, colored by room
 
 ## Controls
-- **WASD / Arrow Keys**: Move around
-- **Mouse**: Look around (after clicking to lock)
-- **ESC**: Release mouse
+- **Arrow Keys / WASD**: Navigate between memory nodes
+- **1-9 Number Keys**: Jump directly to specific nodes
+- **Enter / Space**: Expand and read node content
+- **ESC**: Return to overview
 - **Click on nodes**: Select and view content
-- **Edit button**: Modify node content
+- **Prev/Next buttons**: Navigate between nodes in HUD
 
 ## Tech Stack
 - React + TypeScript
@@ -98,3 +99,14 @@ Run `npm run dev` to start the development server on port 5000.
     - Cream/off-white paper backgrounds
     - Improved contrast for 3D scene overlays
     - Accessible focus and disabled states
+  - Replaced pointer-lock navigation with keyboard hop-to-hop system
+    - Arrow keys/WASD navigate between adjacent nodes
+    - Number keys 1-9 jump directly to specific nodes
+    - Enter/Space expands node content
+    - ESC returns to overview
+    - Auto-selects first node on palace load
+    - Visible cursor at all times (no pointer lock)
+  - Simplified 3D rendering for stability
+    - Basic sphere geometry for memory nodes
+    - Removed complex Float component to prevent WebGL crashes
+    - Added smooth camera lerp transitions
