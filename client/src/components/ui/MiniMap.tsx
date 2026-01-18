@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { useMemoryPalace } from "@/lib/stores/useMemoryPalace";
+import { useNavState } from "@/components/palace/KeyboardNavigation";
 
 interface MiniMapProps {
   playerPosition: [number, number, number];
@@ -11,6 +12,7 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
   const nodes = useMemoryPalace((state) => state.nodes);
   const selectedNodeId = useMemoryPalace((state) => state.selectedNodeId);
   const selectNode = useMemoryPalace((state) => state.selectNode);
+  const setTargetPosition = useNavState((s) => s.setTargetPosition);
   
   const mapSize = 140;
   const worldScale = 2.5;
@@ -21,6 +23,20 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
     const mapY = centerOffset + worldZ * worldScale;
     return [mapX, mapY];
   };
+
+  const mapToWorld = useCallback((mapX: number, mapY: number): [number, number] => {
+    const worldX = (mapX - centerOffset) / worldScale;
+    const worldZ = (mapY - centerOffset) / worldScale;
+    return [worldX, worldZ];
+  }, [centerOffset, worldScale]);
+
+  const handleMapClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mapX = e.clientX - rect.left;
+    const mapY = e.clientY - rect.top;
+    const [worldX, worldZ] = mapToWorld(mapX, mapY);
+    setTargetPosition([worldX, playerPosition[1], worldZ]);
+  }, [mapToWorld, setTargetPosition, playerPosition]);
 
   const roomPositions = useMemo(() => {
     return rooms.map((room) => ({
@@ -50,10 +66,17 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
         boxShadow: '4px 4px 0 #2d2d2d, 0 0 20px rgba(0,0,0,0.3)',
         pointerEvents: "auto",
         backdropFilter: 'blur(4px)',
+        cursor: 'crosshair',
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <svg width={mapSize} height={mapSize} className="absolute inset-0">
+      <svg 
+        width={mapSize} 
+        height={mapSize} 
+        className="absolute inset-0"
+        onClick={handleMapClick}
+        style={{ cursor: 'crosshair' }}
+      >
         <circle
           cx={centerOffset}
           cy={centerOffset}
@@ -104,7 +127,7 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
           </g>
         ))}
 
-        <g transform={`translate(${playerMapX}, ${playerMapY}) rotate(${(playerRotation * 180) / Math.PI + 90})`}>
+        <g transform={`translate(${playerMapX}, ${playerMapY}) rotate(${(-playerRotation * 180) / Math.PI + 180})`}>
           <polygon
             points="0,-6 4,4 0,2 -4,4"
             fill="#2d2d2d"

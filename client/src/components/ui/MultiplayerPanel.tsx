@@ -57,11 +57,11 @@ export default function MultiplayerPanel() {
 
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 animate-fade-in"
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="paper-card p-6 max-w-md w-full mx-4"
+            className="paper-card p-6 max-w-md w-full mx-4 animate-expand-in"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
