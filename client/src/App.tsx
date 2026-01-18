@@ -77,16 +77,14 @@ function App() {
 
           <Lights config={config} />
           
-          {/* Test cube to verify rendering works */}
-          <mesh position={[0, 1, 0]}>
-            <boxGeometry args={[2, 2, 2]} />
-            <meshStandardMaterial color="#ff0000" />
+          {/* Simple ground plane */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+            <circleGeometry args={[50, 32]} />
+            <meshStandardMaterial color={config.colors.floor} />
           </mesh>
 
           <Suspense fallback={null}>
-            <PalaceEnvironment />
             <MemoryNodes />
-            <PathVisualization />
             <RemotePlayers />
           </Suspense>
 
