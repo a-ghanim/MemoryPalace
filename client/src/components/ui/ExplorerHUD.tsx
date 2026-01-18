@@ -13,6 +13,8 @@ export default function ExplorerHUD() {
   const setPalaceName = useMemoryPalace((state) => state.setPalaceName);
   const currentPalaceId = useMemoryPalace((state) => state.currentPalaceId);
   const isLoading = useMemoryPalace((state) => state.isLoading);
+  const getDueCount = useMemoryPalace((state) => state.getDueCount);
+  const startReviewSession = useMemoryPalace((state) => state.startReviewSession);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -61,6 +63,17 @@ export default function ExplorerHUD() {
           )}
         </div>
         <div className="mt-4 space-y-2">
+          {getDueCount() > 0 && (
+            <button
+              onClick={startReviewSession}
+              className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-500 rounded text-sm transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Review</span>
+              <span className="bg-cyan-400/30 px-2 py-0.5 rounded-full text-xs">
+                {getDueCount()} due
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setShowSaveDialog(true)}
             disabled={isLoading}

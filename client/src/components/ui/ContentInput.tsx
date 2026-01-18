@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useMemoryPalace, PALACE_TEMPLATES, PalaceTemplate } from "@/lib/stores/useMemoryPalace";
+import { useMemoryPalace, PALACE_TEMPLATES, PalaceTemplate, LayoutAlgorithm } from "@/lib/stores/useMemoryPalace";
 
 export default function ContentInput() {
   const inputContent = useMemoryPalace((state) => state.inputContent);
@@ -7,6 +7,8 @@ export default function ContentInput() {
   const generatePalace = useMemoryPalace((state) => state.generatePalace);
   const selectedTemplate = useMemoryPalace((state) => state.selectedTemplate);
   const setTemplate = useMemoryPalace((state) => state.setTemplate);
+  const layoutAlgorithm = useMemoryPalace((state) => state.layoutAlgorithm);
+  const setLayoutAlgorithm = useMemoryPalace((state) => state.setLayoutAlgorithm);
   const savedPalaces = useMemoryPalace((state) => state.savedPalaces);
   const fetchSavedPalaces = useMemoryPalace((state) => state.fetchSavedPalaces);
   const loadPalace = useMemoryPalace((state) => state.loadPalace);
@@ -46,6 +48,14 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
     garden: "🌳",
     library: "📚",
   };
+
+  const layoutOptions: { id: LayoutAlgorithm; name: string; icon: string }[] = [
+    { id: "circular", name: "Circular", icon: "◯" },
+    { id: "linear", name: "Linear", icon: "—" },
+    { id: "spiral", name: "Spiral", icon: "🌀" },
+    { id: "grid", name: "Grid", icon: "⊞" },
+    { id: "random", name: "Random", icon: "✦" },
+  ];
 
   const handleDeletePalace = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,6 +135,29 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-purple-200 mb-3">
+              Layout pattern
+            </label>
+            <div className="flex gap-2">
+              {layoutOptions.map((layout) => (
+                <button
+                  key={layout.id}
+                  type="button"
+                  onClick={() => setLayoutAlgorithm(layout.id)}
+                  className={`flex-1 py-2 px-3 rounded-lg border transition-all text-center ${
+                    layoutAlgorithm === layout.id
+                      ? "border-cyan-500 bg-cyan-500/20 text-cyan-300"
+                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-cyan-400"
+                  }`}
+                >
+                  <div className="text-lg">{layout.icon}</div>
+                  <div className="text-xs">{layout.name}</div>
+                </button>
+              ))}
             </div>
           </div>
 

@@ -80,3 +80,15 @@ Run `npm run dev` to start the development server on port 5000.
   - Added mini-map for navigation with player position and room markers
   - Added path visualization showing routes between memory nodes
   - Enhanced memory nodes with category-based shapes and floating animation
+  - Implemented spaced repetition system (SM-2 algorithm)
+    - Tracks lastReviewed, nextReview, interval, easeFactor, streak for each node
+    - Review mode with Again/Hard/Good/Easy quality ratings
+    - Due items highlighted with review button in ExplorerHUD
+  - Added procedural generation for palace layouts
+    - 5 layout algorithms: Circular, Linear, Spiral, Grid, Random
+    - Layout selector in ContentInput UI
+  - Implemented multiplayer support with WebSockets
+    - Create and join shared rooms
+    - Real-time player position sync
+    - Remote player avatars rendered in 3D scene
+    - Player names displayed above avatars

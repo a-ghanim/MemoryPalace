@@ -102,6 +102,15 @@ export const PALACE_TEMPLATES: Record<PalaceTemplate, TemplateConfig> = {
   },
 };
 
+export interface SpacedRepetitionData {
+  lastReviewed: number | null;
+  nextReview: number;
+  interval: number;
+  easeFactor: number;
+  repetitions: number;
+  streak: number;
+}
+
 export interface MemoryNode {
   id: string;
   content: string;
@@ -112,6 +121,7 @@ export interface MemoryNode {
   position: [number, number, number];
   roomIndex: number;
   color: string;
+  srs?: SpacedRepetitionData;
 }
 
 export interface Room {
@@ -121,7 +131,9 @@ export interface Room {
   nodes: string[];
 }
 
-export type AppPhase = "input" | "exploring";
+export type AppPhase = "input" | "exploring" | "review";
+
+export type ReviewQuality = "again" | "hard" | "good" | "easy";
 
 export interface SavedPalace {
   id: number;
@@ -134,6 +146,8 @@ export interface SavedPalace {
   updatedAt: string;
 }
 
+export type LayoutAlgorithm = "circular" | "linear" | "spiral" | "grid" | "random";
+
 interface MemoryPalaceState {
   phase: AppPhase;
   nodes: MemoryNode[];
@@ -141,14 +155,19 @@ interface MemoryPalaceState {
   selectedNodeId: string | null;
   inputContent: string;
   selectedTemplate: PalaceTemplate;
+  layoutAlgorithm: LayoutAlgorithm;
   currentPalaceId: number | null;
   palaceName: string;
   savedPalaces: SavedPalace[];
   isLoading: boolean;
+  reviewQueue: string[];
+  currentReviewIndex: number;
+  showAnswer: boolean;
 
   setPhase: (phase: AppPhase) => void;
   setInputContent: (content: string) => void;
   setTemplate: (template: PalaceTemplate) => void;
+  setLayoutAlgorithm: (algorithm: LayoutAlgorithm) => void;
   setPalaceName: (name: string) => void;
   generatePalace: () => Promise<void>;
   selectNode: (id: string | null) => void;
@@ -159,6 +178,12 @@ interface MemoryPalaceState {
   loadPalace: (id: number) => Promise<void>;
   deletePalace: (id: number) => Promise<void>;
   fetchSavedPalaces: () => Promise<void>;
+  
+  startReviewSession: () => void;
+  submitReview: (quality: ReviewQuality) => void;
+  toggleShowAnswer: () => void;
+  getNodesNeedingReview: () => MemoryNode[];
+  getDueCount: () => number;
 }
 
 function generateId(): string {
@@ -350,6 +375,193 @@ function splitContentIntoChunks(content: string): string[] {
   return mergedChunks.slice(0, 16);
 }
 
+function createInitialSRS(): SpacedRepetitionData {
+  return {
+    lastReviewed: null,
+    nextReview: Date.now(),
+    interval: 1,
+    easeFactor: 2.5,
+    repetitions: 0,
+    streak: 0,
+  };
+}
+
+function calculateNextReview(srs: SpacedRepetitionData, quality: ReviewQuality): SpacedRepetitionData {
+  const qualityValues: Record<ReviewQuality, number> = {
+    again: 0,
+    hard: 2,
+    good: 3,
+    easy: 5,
+  };
+  
+  const q = qualityValues[quality];
+  const now = Date.now();
+  
+  let { interval, easeFactor, repetitions, streak } = srs;
+  
+  if (q < 2) {
+    repetitions = 0;
+    interval = 1;
+    streak = 0;
+  } else {
+    if (repetitions === 0) {
+      interval = 1;
+    } else if (repetitions === 1) {
+      interval = 6;
+    } else {
+      interval = Math.round(interval * easeFactor);
+    }
+    
+    easeFactor = Math.max(1.3, easeFactor + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
+    repetitions += 1;
+    streak += 1;
+  }
+  
+  const intervalMs = interval * 24 * 60 * 60 * 1000;
+  
+  return {
+    lastReviewed: now,
+    nextReview: now + intervalMs,
+    interval,
+    easeFactor,
+    repetitions,
+    streak,
+  };
+}
+
+type ProceduralLayoutFn = (
+  nodeCount: number,
+  roomCount: number,
+  rooms: Room[]
+) => [number, number, number][];
+
+const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
+  circular: (nodeCount, roomCount, rooms) => {
+    const positions: [number, number, number][] = [];
+    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
+    for (let i = 0; i < nodeCount; i++) {
+      nodesPerRoom[i % roomCount]++;
+    }
+    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const roomIndex = i % roomCount;
+      const room = rooms[roomIndex];
+      const localIndex = roomNodeIndex[roomIndex]++;
+      const totalInRoom = nodesPerRoom[roomIndex];
+      const angleStep = (Math.PI * 1.5) / Math.max(totalInRoom, 1);
+      const localAngle = -Math.PI * 0.75 + localIndex * angleStep;
+      const localRadius = 3 + Math.floor(localIndex / 4) * 1.5;
+      positions.push([
+        room.position[0] + Math.cos(localAngle) * localRadius,
+        1.5,
+        room.position[2] + Math.sin(localAngle) * localRadius,
+      ]);
+    }
+    return positions;
+  },
+  
+  linear: (nodeCount, roomCount, rooms) => {
+    const positions: [number, number, number][] = [];
+    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
+    for (let i = 0; i < nodeCount; i++) {
+      nodesPerRoom[i % roomCount]++;
+    }
+    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const roomIndex = i % roomCount;
+      const room = rooms[roomIndex];
+      const localIndex = roomNodeIndex[roomIndex]++;
+      const totalInRoom = nodesPerRoom[roomIndex];
+      const startOffset = -((totalInRoom - 1) * 2) / 2;
+      const row = Math.floor(localIndex / 3);
+      const col = localIndex % 3;
+      positions.push([
+        room.position[0] + startOffset + col * 2,
+        1.5 + row * 0.5,
+        room.position[2] + row * 2,
+      ]);
+    }
+    return positions;
+  },
+  
+  spiral: (nodeCount, roomCount, rooms) => {
+    const positions: [number, number, number][] = [];
+    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
+    for (let i = 0; i < nodeCount; i++) {
+      nodesPerRoom[i % roomCount]++;
+    }
+    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const roomIndex = i % roomCount;
+      const room = rooms[roomIndex];
+      const localIndex = roomNodeIndex[roomIndex]++;
+      const spiralAngle = localIndex * 1.2;
+      const spiralRadius = 1.5 + localIndex * 0.6;
+      positions.push([
+        room.position[0] + Math.cos(spiralAngle) * spiralRadius,
+        1.5 + localIndex * 0.2,
+        room.position[2] + Math.sin(spiralAngle) * spiralRadius,
+      ]);
+    }
+    return positions;
+  },
+  
+  grid: (nodeCount, roomCount, rooms) => {
+    const positions: [number, number, number][] = [];
+    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
+    for (let i = 0; i < nodeCount; i++) {
+      nodesPerRoom[i % roomCount]++;
+    }
+    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const roomIndex = i % roomCount;
+      const room = rooms[roomIndex];
+      const localIndex = roomNodeIndex[roomIndex]++;
+      const gridSize = 3;
+      const row = Math.floor(localIndex / gridSize);
+      const col = localIndex % gridSize;
+      positions.push([
+        room.position[0] + (col - 1) * 2.5,
+        1.5,
+        room.position[2] + (row - 1) * 2.5,
+      ]);
+    }
+    return positions;
+  },
+  
+  random: (nodeCount, roomCount, rooms) => {
+    const positions: [number, number, number][] = [];
+    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
+    for (let i = 0; i < nodeCount; i++) {
+      nodesPerRoom[i % roomCount]++;
+    }
+    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const seed = nodeCount * 1000 + roomCount;
+    const seededRandom = (s: number) => {
+      const x = Math.sin(s) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    for (let i = 0; i < nodeCount; i++) {
+      const roomIndex = i % roomCount;
+      const room = rooms[roomIndex];
+      const localIndex = roomNodeIndex[roomIndex]++;
+      const randX = (seededRandom(seed + roomIndex * 100 + localIndex * 2) - 0.5) * 6;
+      const randZ = (seededRandom(seed + roomIndex * 100 + localIndex * 2 + 1) - 0.5) * 6;
+      positions.push([
+        room.position[0] + randX,
+        1.5 + seededRandom(seed + roomIndex * 100 + localIndex * 3) * 0.5,
+        room.position[2] + randZ,
+      ]);
+    }
+    return positions;
+  },
+};
+
 export const useMemoryPalace = create<MemoryPalaceState>()(
   subscribeWithSelector((set, get) => ({
     phase: "input",
@@ -358,16 +570,22 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
     selectedNodeId: null,
     inputContent: "",
     selectedTemplate: "mansion" as PalaceTemplate,
+    layoutAlgorithm: "circular" as LayoutAlgorithm,
     currentPalaceId: null,
     palaceName: "",
     savedPalaces: [],
     isLoading: false,
+    reviewQueue: [],
+    currentReviewIndex: 0,
+    showAnswer: false,
 
     setPhase: (phase) => set({ phase }),
 
     setInputContent: (content) => set({ inputContent: content }),
 
     setTemplate: (template) => set({ selectedTemplate: template }),
+
+    setLayoutAlgorithm: (algorithm) => set({ layoutAlgorithm: algorithm }),
 
     setPalaceName: (name) => set({ palaceName: name }),
 
@@ -442,15 +660,13 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         });
       }
 
+      const { layoutAlgorithm } = get();
+      const positions = layoutAlgorithms[layoutAlgorithm](aiChunks.length, numRooms, rooms);
+
       aiChunks.forEach((chunk, index) => {
         const roomIndex = index % numRooms;
         const room = rooms[roomIndex];
-        const nodeIndexInRoom = Math.floor(index / numRooms);
-        
-        const localAngle = (nodeIndexInRoom * Math.PI * 0.5) - Math.PI * 0.25;
-        const localRadius = 3;
-        const nodeX = room.position[0] + Math.cos(localAngle) * localRadius;
-        const nodeZ = room.position[2] + Math.sin(localAngle) * localRadius;
+        const position = positions[index] || [room.position[0], 1.5, room.position[2]];
 
         const nodeId = generateId();
 
@@ -461,9 +677,10 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
           mnemonic: chunk.mnemonic,
           keywords: chunk.keywords,
           category: chunk.category,
-          position: [nodeX, 1.5, nodeZ],
+          position: position as [number, number, number],
           roomIndex,
           color: template.colors.nodeColors[roomIndex % template.colors.nodeColors.length],
+          srs: createInitialSRS(),
         });
 
         room.nodes.push(nodeId);
@@ -604,6 +821,64 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       } catch (error) {
         console.error("Error fetching palaces:", error);
       }
+    },
+
+    getNodesNeedingReview: () => {
+      const { nodes } = get();
+      const now = Date.now();
+      return nodes.filter((node) => {
+        if (!node.srs) return true;
+        return node.srs.nextReview <= now;
+      });
+    },
+
+    getDueCount: () => {
+      return get().getNodesNeedingReview().length;
+    },
+
+    startReviewSession: () => {
+      const dueNodes = get().getNodesNeedingReview();
+      if (dueNodes.length === 0) return;
+      
+      const shuffled = [...dueNodes].sort(() => Math.random() - 0.5);
+      set({
+        reviewQueue: shuffled.map((n) => n.id),
+        currentReviewIndex: 0,
+        showAnswer: false,
+        phase: "review",
+        selectedNodeId: shuffled[0]?.id || null,
+      });
+    },
+
+    toggleShowAnswer: () => {
+      set((state) => ({ showAnswer: !state.showAnswer }));
+    },
+
+    submitReview: (quality: ReviewQuality) => {
+      const { nodes, reviewQueue, currentReviewIndex } = get();
+      const currentNodeId = reviewQueue[currentReviewIndex];
+      
+      if (!currentNodeId) return;
+      
+      const updatedNodes = nodes.map((node) => {
+        if (node.id !== currentNodeId) return node;
+        
+        const currentSrs = node.srs || createInitialSRS();
+        const newSrs = calculateNextReview(currentSrs, quality);
+        
+        return { ...node, srs: newSrs };
+      });
+      
+      const nextIndex = currentReviewIndex + 1;
+      const isComplete = nextIndex >= reviewQueue.length;
+      
+      set({
+        nodes: updatedNodes,
+        currentReviewIndex: nextIndex,
+        showAnswer: false,
+        selectedNodeId: isComplete ? null : reviewQueue[nextIndex],
+        phase: isComplete ? "exploring" : "review",
+      });
     },
   }))
 );

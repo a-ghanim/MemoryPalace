@@ -7,9 +7,12 @@ import { useMemoryPalace, PALACE_TEMPLATES } from "./lib/stores/useMemoryPalace"
 import ContentInput from "./components/ui/ContentInput";
 import ExplorerHUD from "./components/ui/ExplorerHUD";
 import MiniMap from "./components/ui/MiniMap";
+import ReviewMode from "./components/ui/ReviewMode";
+import MultiplayerPanel from "./components/ui/MultiplayerPanel";
 import PalaceEnvironment from "./components/palace/PalaceEnvironment";
 import MemoryNodes from "./components/palace/MemoryNodes";
 import PathVisualization from "./components/palace/PathVisualization";
+import RemotePlayers from "./components/palace/RemotePlayers";
 import PlayerController, { usePlayerState } from "./components/palace/PlayerController";
 import Lights from "./components/palace/Lights";
 
@@ -36,6 +39,10 @@ function App() {
 
   if (phase === "input") {
     return <ContentInput />;
+  }
+
+  if (phase === "review") {
+    return <ReviewMode />;
   }
 
   return (
@@ -65,6 +72,7 @@ function App() {
             <PalaceEnvironment />
             <MemoryNodes />
             <PathVisualization />
+            <RemotePlayers />
           </Suspense>
 
           <PlayerController />
@@ -72,6 +80,7 @@ function App() {
 
         <ExplorerHUD />
         <MiniMap playerPosition={playerPosition} playerRotation={playerRotation} />
+        <MultiplayerPanel />
       </KeyboardControls>
     </div>
   );

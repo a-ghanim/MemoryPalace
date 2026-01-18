@@ -1,8 +1,9 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "@react-three/drei";
 import * as THREE from "three";
 import { create } from "zustand";
+import { useMultiplayer } from "@/lib/hooks/useMultiplayer";
 
 enum Controls {
   forward = "forward",
@@ -80,6 +81,8 @@ export default function PlayerController() {
 
   const setPlayerPosition = usePlayerState((s) => s.setPosition);
   const setPlayerRotation = usePlayerState((s) => s.setRotation);
+  const sendMultiplayerPosition = useMultiplayer((s) => s.sendPosition);
+  const multiplayerRoomId = useMultiplayer((s) => s.roomId);
   
   const frameCount = useRef(0);
 
@@ -120,8 +123,14 @@ export default function PlayerController() {
     
     frameCount.current += 1;
     if (frameCount.current % 5 === 0) {
-      setPlayerPosition([camera.position.x, camera.position.y, camera.position.z]);
-      setPlayerRotation(rotation.current.y);
+      const pos: [number, number, number] = [camera.position.x, camera.position.y, camera.position.z];
+      const rot = rotation.current.y;
+      setPlayerPosition(pos);
+      setPlayerRotation(rot);
+      
+      if (multiplayerRoomId) {
+        sendMultiplayerPosition(pos, rot);
+      }
     }
   });
 
