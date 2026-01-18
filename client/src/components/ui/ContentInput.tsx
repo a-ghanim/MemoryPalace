@@ -12,17 +12,21 @@ export default function ContentInput() {
     }
   };
 
-  const sampleContent = `The memory palace technique, also known as the method of loci, is an ancient mnemonic strategy.
+  const sampleContent = `Mercury is the smallest planet and closest to the Sun, completing an orbit in just 88 Earth days.
 
-It works by associating information with specific locations in a familiar place, like your home or a building you know well.
+Venus is the hottest planet with surface temperatures reaching 465°C, often called Earth's twin due to similar size.
 
-To use this technique, you visualize walking through a familiar location and placing the items you want to remember at specific spots.
+Earth is the only known planet with liquid water on its surface and supports abundant life.
 
-When you need to recall the information, you mentally walk through the same route and retrieve each item from its location.
+Mars is known as the Red Planet due to iron oxide on its surface, and has the largest volcano in our solar system: Olympus Mons.
 
-This technique works because our brains are naturally good at remembering spatial information and visual imagery.
+Jupiter is the largest planet, with a mass more than twice that of all other planets combined, featuring the Great Red Spot storm.
 
-Studies show that memory champions who use this technique can memorize thousands of items in order.`;
+Saturn is famous for its spectacular ring system made of ice and rock particles, and has 146 known moons.
+
+Uranus rotates on its side at a 98-degree tilt, making it unique among planets, and appears blue-green due to methane.
+
+Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest moon Triton orbits in the opposite direction.`;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
