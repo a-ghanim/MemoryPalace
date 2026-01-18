@@ -20,16 +20,16 @@ export default function Lights({ config }: LightsProps) {
 
   return (
     <>
-      <ambientLight intensity={0.6} color={config.colors.ambient} />
+      <ambientLight intensity={1.0} color="#ffffff" />
       
       <directionalLight
         ref={sunRef}
         position={[20, 35, 20]}
-        intensity={1.5}
-        color="#fff8f0"
+        intensity={2.0}
+        color="#ffffff"
         castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
         shadow-camera-near={0.5}
         shadow-camera-far={100}
         shadow-camera-left={-50}
@@ -40,23 +40,23 @@ export default function Lights({ config }: LightsProps) {
       />
       
       <hemisphereLight 
-        args={[config.colors.ambient, config.colors.floor, 0.8]} 
+        args={["#ffffff", config.colors.floor, 1.2]} 
       />
       
       <pointLight
-        position={[0, 12, 0]}
-        intensity={1.0}
-        distance={50}
-        color={config.colors.accent}
-        decay={2}
+        position={[0, 15, 0]}
+        intensity={2.0}
+        distance={80}
+        color="#ffffff"
+        decay={1}
       />
       
       <pointLight
         position={[0, 3, 0]}
-        intensity={0.5}
-        distance={30}
+        intensity={1.0}
+        distance={40}
         color="#ffffff"
-        decay={2}
+        decay={1}
       />
     </>
   );

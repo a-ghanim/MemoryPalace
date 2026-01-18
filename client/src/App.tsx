@@ -60,11 +60,20 @@ function App() {
             antialias: true,
             powerPreference: "default",
             toneMapping: 4,
-            toneMappingExposure: 1.2,
+            toneMappingExposure: 1.5,
+          }}
+          onCreated={({ gl }) => {
+            gl.domElement.addEventListener('webglcontextlost', (e) => {
+              e.preventDefault();
+              console.log('WebGL context lost, attempting recovery...');
+            });
+            gl.domElement.addEventListener('webglcontextrestored', () => {
+              console.log('WebGL context restored');
+            });
           }}
         >
-          <color attach="background" args={["#2a2535"]} />
-          <fog attach="fog" args={["#2a2535", 60, 120]} />
+          <color attach="background" args={["#4a4560"]} />
+          <fog attach="fog" args={["#4a4560", 80, 150]} />
 
           <Lights config={config} />
 
