@@ -79,8 +79,18 @@ export default function ExplorerHUD() {
 
   return (
     <>
-      <div className="fixed top-4 left-4 p-4 paper-card-overlay max-w-xs">
-        <h2 className="text-xl paper-title mb-2">Memory Palace</h2>
+      {/* Pinned Topic Header */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 paper-card-overlay px-6 py-3 text-center z-40">
+        <div className="paper-text" style={{ fontSize: '0.75rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          Memorizing
+        </div>
+        <h1 className="paper-title text-xl" style={{ color: '#333', maxWidth: '400px' }}>
+          {palaceName || "Your Memory Palace"}
+        </h1>
+      </div>
+
+      <div className="fixed top-24 left-4 p-4 paper-card-overlay max-w-xs">
+        <h2 className="text-lg paper-title mb-2">Palace Info</h2>
         <div className="paper-text space-y-1" style={{ color: '#555' }}>
           <p>{rooms.length} rooms</p>
           <p>{nodes.length} memory nodes</p>
@@ -118,7 +128,7 @@ export default function ExplorerHUD() {
         </div>
       </div>
 
-      <div className="fixed top-4 right-4 p-4 paper-card-overlay max-w-xs">
+      <div className="fixed top-24 right-4 p-4 paper-card-overlay max-w-xs">
         <h3 className="paper-title text-lg mb-2">Controls</h3>
         <div className="paper-text space-y-1" style={{ fontSize: '0.9rem', color: '#555' }}>
           <p><strong>← →</strong> or <strong>A D</strong> - Prev/Next node</p>

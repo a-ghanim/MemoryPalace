@@ -55,16 +55,18 @@ export default function MemoryNode({ node }: MemoryNodeProps) {
       </mesh>
 
       <Text
-        position={[0, 2.5, 0]}
-        fontSize={0.25}
+        position={[0, 2.8, 0]}
+        fontSize={0.22}
         color="#ffffff"
         anchorX="center"
         anchorY="middle"
-        maxWidth={4}
-        outlineWidth={0.03}
+        maxWidth={6}
+        textAlign="center"
+        outlineWidth={0.04}
         outlineColor="#000000"
+        lineHeight={1.2}
       >
-        {node.title.length > 20 ? node.title.substring(0, 20) + "..." : node.title}
+        {node.title}
       </Text>
 
       <pointLight
