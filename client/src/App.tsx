@@ -9,9 +9,8 @@ import ExplorerHUD from "./components/ui/ExplorerHUD";
 import MiniMap from "./components/ui/MiniMap";
 import ReviewMode from "./components/ui/ReviewMode";
 import MultiplayerPanel from "./components/ui/MultiplayerPanel";
-import PalaceEnvironment from "./components/palace/PalaceEnvironment";
+import SimplePalace from "./components/palace/SimplePalace";
 import MemoryNodes from "./components/palace/MemoryNodes";
-import PathVisualization from "./components/palace/PathVisualization";
 import RemotePlayers from "./components/palace/RemotePlayers";
 import PlayerController, { usePlayerState } from "./components/palace/PlayerController";
 import Lights from "./components/palace/Lights";
@@ -76,14 +75,9 @@ function App() {
           <fog attach="fog" args={["#4a4560", 80, 150]} />
 
           <Lights config={config} />
-          
-          {/* Simple ground plane */}
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-            <circleGeometry args={[50, 32]} />
-            <meshStandardMaterial color={config.colors.floor} />
-          </mesh>
 
           <Suspense fallback={null}>
+            <SimplePalace />
             <MemoryNodes />
             <RemotePlayers />
           </Suspense>

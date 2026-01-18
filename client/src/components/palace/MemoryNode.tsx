@@ -130,7 +130,6 @@ export default function MemoryNode({ node }: MemoryNodeProps) {
         maxWidth={3}
         outlineWidth={0.025}
         outlineColor="#000000"
-        font="/fonts/Inter-Bold.woff"
       >
         {node.title.length > 25 ? node.title.substring(0, 25) + "..." : node.title}
       </Text>
