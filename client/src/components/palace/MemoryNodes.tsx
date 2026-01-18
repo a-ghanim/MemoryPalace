@@ -6,8 +6,8 @@ export default function MemoryNodes() {
 
   return (
     <group>
-      {nodes.map((node) => (
-        <MemoryNode key={node.id} node={node} />
+      {nodes.map((node, index) => (
+        <MemoryNode key={node.id} node={node} index={index} />
       ))}
     </group>
   );
