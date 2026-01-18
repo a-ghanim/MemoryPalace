@@ -72,3 +72,11 @@ Run `npm run dev` to start the development server on port 5000.
   - Implemented full save/load persistence with PostgreSQL database
   - Added API endpoints for CRUD operations on palaces
   - Created save dialog in ExplorerHUD and saved palaces list in ContentInput
+  - Added Claude AI integration for intelligent content parsing
+    - Generates mnemonics, keywords, and categories for each chunk
+    - Suggests thematic room names based on content
+    - Falls back to regex parsing if AI unavailable
+  - Improved 3D rendering with template-aware lighting and tone mapping
+  - Added mini-map for navigation with player position and room markers
+  - Added path visualization showing routes between memory nodes
+  - Enhanced memory nodes with category-based shapes and floating animation

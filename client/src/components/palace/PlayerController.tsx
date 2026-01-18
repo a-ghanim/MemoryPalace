@@ -1,7 +1,8 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useKeyboardControls } from "@react-three/drei";
 import * as THREE from "three";
+import { create } from "zustand";
 
 enum Controls {
   forward = "forward",
@@ -9,6 +10,20 @@ enum Controls {
   left = "left",
   right = "right",
 }
+
+interface PlayerState {
+  position: [number, number, number];
+  rotation: number;
+  setPosition: (pos: [number, number, number]) => void;
+  setRotation: (rot: number) => void;
+}
+
+export const usePlayerState = create<PlayerState>((set) => ({
+  position: [0, 2, 10],
+  rotation: 0,
+  setPosition: (pos) => set({ position: pos }),
+  setRotation: (rot) => set({ rotation: rot }),
+}));
 
 export default function PlayerController() {
   const { camera } = useThree();
@@ -63,6 +78,11 @@ export default function PlayerController() {
     };
   }, [camera]);
 
+  const setPlayerPosition = usePlayerState((s) => s.setPosition);
+  const setPlayerRotation = usePlayerState((s) => s.setRotation);
+  
+  const frameCount = useRef(0);
+
   useFrame((_, delta) => {
     const keys = getKeys();
 
@@ -97,6 +117,12 @@ export default function PlayerController() {
 
     const euler = new THREE.Euler(rotation.current.x, rotation.current.y, 0, "YXZ");
     camera.quaternion.setFromEuler(euler);
+    
+    frameCount.current += 1;
+    if (frameCount.current % 5 === 0) {
+      setPlayerPosition([camera.position.x, camera.position.y, camera.position.z]);
+      setPlayerRotation(rotation.current.y);
+    }
   });
 
   return null;
