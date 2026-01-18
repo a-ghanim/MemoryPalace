@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMemoryPalace, PALACE_TEMPLATES, PalaceTemplate, LayoutAlgorithm } from "@/lib/stores/useMemoryPalace";
 
 export default function ContentInput() {
@@ -26,21 +26,124 @@ export default function ContentInput() {
     }
   };
 
-  const sampleContent = `Mercury is the smallest planet and closest to the Sun, completing an orbit in just 88 Earth days.
+  const [showSamples, setShowSamples] = useState(false);
+
+  const sampleContents = [
+    {
+      name: "Solar System",
+      icon: "🪐",
+      content: `Mercury is the smallest planet and closest to the Sun, completing an orbit in just 88 Earth days.
 
 Venus is the hottest planet with surface temperatures reaching 465°C, often called Earth's twin due to similar size.
 
 Earth is the only known planet with liquid water on its surface and supports abundant life.
 
-Mars is known as the Red Planet due to iron oxide on its surface, and has the largest volcano in our solar system: Olympus Mons.
+Mars is known as the Red Planet due to iron oxide on its surface, and has the largest volcano: Olympus Mons.
 
-Jupiter is the largest planet, with a mass more than twice that of all other planets combined, featuring the Great Red Spot storm.
+Jupiter is the largest planet, featuring the Great Red Spot storm that has raged for over 400 years.
 
-Saturn is famous for its spectacular ring system made of ice and rock particles, and has 146 known moons.
+Saturn is famous for its spectacular ring system made of ice and rock particles.
 
-Uranus rotates on its side at a 98-degree tilt, making it unique among planets, and appears blue-green due to methane.
+Uranus rotates on its side at a 98-degree tilt, appearing blue-green due to methane.
 
-Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest moon Triton orbits in the opposite direction.`;
+Neptune is the windiest planet with storms reaching 2,100 km/h.`
+    },
+    {
+      name: "Greek Mythology",
+      icon: "⚡",
+      content: `Zeus is the king of the gods, ruler of Mount Olympus, wielding thunderbolts as his weapon.
+
+Poseidon is the god of the sea, earthquakes, and horses, carrying a powerful trident.
+
+Hades rules the underworld, guarding the dead with his three-headed dog Cerberus.
+
+Athena is the goddess of wisdom and warfare, born fully armored from Zeus's head.
+
+Apollo is the god of music, poetry, art, and the sun, driving his golden chariot across the sky.
+
+Artemis is the goddess of the hunt and moon, twin sister of Apollo, protector of wild animals.
+
+Aphrodite is the goddess of love and beauty, born from sea foam near Cyprus.
+
+Hermes is the messenger god with winged sandals, also patron of thieves and travelers.`
+    },
+    {
+      name: "Famous Artists",
+      icon: "🎨",
+      content: `Leonardo da Vinci painted the Mona Lisa and The Last Supper, also designing flying machines centuries ahead of his time.
+
+Michelangelo sculpted David and painted the Sistine Chapel ceiling, taking 4 years lying on scaffolding.
+
+Vincent van Gogh created Starry Night while in an asylum, selling only one painting during his lifetime.
+
+Pablo Picasso co-founded Cubism and created over 50,000 artworks including Guernica.
+
+Claude Monet founded Impressionism, painting his water lilies garden over 250 times.
+
+Frida Kahlo created surreal self-portraits exploring identity, pain, and Mexican culture.
+
+Salvador Dalí painted melting clocks in The Persistence of Memory, becoming an icon of Surrealism.
+
+Andy Warhol led the Pop Art movement with his Campbell's Soup Cans and Marilyn Monroe prints.`
+    },
+    {
+      name: "World Wonders",
+      icon: "🏛️",
+      content: `The Great Wall of China stretches over 13,000 miles, built over centuries to protect against invasions.
+
+Machu Picchu sits 7,970 feet high in the Peruvian Andes, a 15th-century Incan citadel.
+
+The Colosseum in Rome could hold 50,000 spectators watching gladiator battles and public spectacles.
+
+Petra in Jordan features buildings carved directly into rose-red cliff faces by the Nabataeans.
+
+Christ the Redeemer stands 98 feet tall atop Corcovado mountain overlooking Rio de Janeiro.
+
+The Taj Mahal was built by Emperor Shah Jahan as a mausoleum for his beloved wife Mumtaz.
+
+Chichen Itza's pyramid has 365 steps, one for each day, and produces a serpent shadow during equinoxes.
+
+The Great Pyramid of Giza stood as the tallest structure on Earth for over 3,800 years.`
+    },
+    {
+      name: "Human Body",
+      icon: "🫀",
+      content: `The heart beats about 100,000 times per day, pumping 2,000 gallons of blood through 60,000 miles of vessels.
+
+The brain contains 86 billion neurons, using 20% of your body's energy while weighing only 3 pounds.
+
+Bones are stronger than steel per unit weight, and the skeleton completely renews itself every 10 years.
+
+The lungs contain 300 million alveoli, providing a surface area the size of a tennis court for gas exchange.
+
+The liver performs over 500 functions including filtering blood and producing bile for digestion.
+
+The small intestine is about 20 feet long with a surface area of 2,700 square feet due to villi.
+
+Skin is the largest organ, covering 22 square feet and completely replacing itself every 2-3 weeks.
+
+Eyes can distinguish about 10 million different colors using 6 million cone cells.`
+    },
+    {
+      name: "Programming Concepts",
+      icon: "💻",
+      content: `Variables are containers that store data values, like labeled boxes holding different items.
+
+Functions are reusable blocks of code that perform specific tasks when called by name.
+
+Loops repeat code multiple times: for loops count iterations, while loops check conditions.
+
+Arrays store multiple values in a single variable, accessed by numerical index starting at zero.
+
+Objects group related data and functions together using key-value pairs.
+
+Conditionals (if/else) let code make decisions based on whether conditions are true or false.
+
+APIs are interfaces that allow different software programs to communicate with each other.
+
+Recursion is when a function calls itself, useful for problems that can be broken into smaller versions.`
+    }
+  ];
 
   const templateIcons: Record<PalaceTemplate, string> = {
     mansion: "🏛️",
@@ -171,10 +274,10 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
           <div className="flex gap-4">
             <button
               type="button"
-              onClick={() => setInputContent(sampleContent)}
+              onClick={() => setShowSamples(!showSamples)}
               className="flex-1 paper-btn"
             >
-              Load Sample
+              {showSamples ? "Hide Examples" : "Try an Example"}
             </button>
             <button
               type="submit"
@@ -184,6 +287,26 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
               {isLoading ? "Building..." : "Build Palace"}
             </button>
           </div>
+
+          {showSamples && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {sampleContents.map((sample, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => {
+                    setInputContent(sample.content);
+                    setShowSamples(false);
+                  }}
+                  className="paper-btn text-left flex items-center gap-2"
+                  style={{ padding: '0.75rem' }}
+                >
+                  <span className="text-xl">{sample.icon}</span>
+                  <span style={{ fontSize: '0.95rem' }}>{sample.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </form>
 
         <hr className="paper-divider" />
