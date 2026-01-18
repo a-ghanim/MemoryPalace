@@ -14,6 +14,7 @@ export default function ContentInput() {
   const loadPalace = useMemoryPalace((state) => state.loadPalace);
   const deletePalace = useMemoryPalace((state) => state.deletePalace);
   const isLoading = useMemoryPalace((state) => state.isLoading);
+  const loadingStatus = useMemoryPalace((state) => state.loadingStatus);
 
   useEffect(() => {
     fetchSavedPalaces();
@@ -284,7 +285,7 @@ Recursion is when a function calls itself, useful for problems that can be broke
               disabled={!inputContent.trim() || isLoading}
               className="flex-1 paper-btn paper-btn-primary disabled:opacity-50"
             >
-              {isLoading ? "Building..." : "Build Palace"}
+              {isLoading ? (loadingStatus || "Building...") : "Build Palace"}
             </button>
           </div>
 

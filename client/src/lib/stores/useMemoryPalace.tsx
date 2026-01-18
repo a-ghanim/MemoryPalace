@@ -160,6 +160,7 @@ interface MemoryPalaceState {
   palaceName: string;
   savedPalaces: SavedPalace[];
   isLoading: boolean;
+  loadingStatus: string;
   reviewQueue: string[];
   currentReviewIndex: number;
   showAnswer: boolean;
@@ -575,6 +576,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
     palaceName: "",
     savedPalaces: [],
     isLoading: false,
+    loadingStatus: "",
     reviewQueue: [],
     currentReviewIndex: 0,
     showAnswer: false,
@@ -595,7 +597,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       const { inputContent, selectedTemplate } = get();
       if (!inputContent.trim()) return;
 
-      set({ isLoading: true });
+      set({ isLoading: true, loadingStatus: "Analyzing your content..." });
 
       const template = PALACE_TEMPLATES[selectedTemplate];
       
@@ -611,6 +613,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       let suggestedRoomNames: string[] = [];
       
       try {
+        set({ loadingStatus: "Creating memory tricks with AI..." });
         const response = await fetch("/api/parse-content", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -621,12 +624,15 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
           const data = await response.json();
           aiChunks = data.chunks || [];
           suggestedRoomNames = data.suggestedRoomNames || [];
+          set({ loadingStatus: "Building your palace..." });
         }
       } catch (error) {
         console.log("AI parsing unavailable, using fallback");
+        set({ loadingStatus: "Building palace with basic parsing..." });
       }
       
       if (aiChunks.length === 0) {
+        set({ loadingStatus: "Splitting content into memory chunks..." });
         const chunks = splitContentIntoChunks(inputContent);
         aiChunks = chunks.map(chunk => ({
           content: chunk,
@@ -635,9 +641,11 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       }
       
       if (aiChunks.length === 0) {
-        set({ isLoading: false });
+        set({ isLoading: false, loadingStatus: "" });
         return;
       }
+      
+      set({ loadingStatus: "Placing memory nodes in rooms..." });
       
       const numRooms = Math.max(1, Math.min(Math.ceil(aiChunks.length / 3), 4));
       
@@ -693,6 +701,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         selectedNodeId: null,
         currentPalaceId: null,
         isLoading: false,
+        loadingStatus: "",
       });
     },
 

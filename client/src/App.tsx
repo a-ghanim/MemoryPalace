@@ -60,11 +60,11 @@ function App() {
             antialias: true,
             powerPreference: "default",
             toneMapping: 4,
-            toneMappingExposure: 1.0,
+            toneMappingExposure: 1.2,
           }}
         >
-          <color attach="background" args={["#1a1520"]} />
-          <fog attach="fog" args={["#1a1520", 40, 90]} />
+          <color attach="background" args={["#2a2535"]} />
+          <fog attach="fog" args={["#2a2535", 60, 120]} />
 
           <Lights config={config} />
 
