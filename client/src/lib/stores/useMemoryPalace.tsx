@@ -1,6 +1,107 @@
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
+export type PalaceTemplate = "mansion" | "museum" | "garden" | "library";
+
+export interface TemplateConfig {
+  id: PalaceTemplate;
+  name: string;
+  description: string;
+  roomNames: string[];
+  colors: {
+    floor: string;
+    walls: string;
+    accent: string;
+    ambient: string;
+    nodeColors: string[];
+  };
+  style: {
+    hasColumns: boolean;
+    hasDome: boolean;
+    hasTorches: boolean;
+    centralFeature: "crystal" | "fountain" | "tree" | "globe";
+  };
+}
+
+export const PALACE_TEMPLATES: Record<PalaceTemplate, TemplateConfig> = {
+  mansion: {
+    id: "mansion",
+    name: "Grand Mansion",
+    description: "Elegant rooms with marble floors and crystal chandeliers",
+    roomNames: ["Entrance Hall", "Ballroom", "Dining Room", "Drawing Room", "Master Suite", "Gallery", "Study", "Conservatory"],
+    colors: {
+      floor: "#c9b896",
+      walls: "#f0ebe5",
+      accent: "#b8860b",
+      ambient: "#ffeedd",
+      nodeColors: ["#4F46E5", "#7C3AED", "#EC4899", "#F59E0B", "#10B981", "#06B6D4", "#8B5CF6", "#EF4444"],
+    },
+    style: {
+      hasColumns: true,
+      hasDome: true,
+      hasTorches: true,
+      centralFeature: "crystal",
+    },
+  },
+  museum: {
+    id: "museum",
+    name: "Ancient Museum",
+    description: "Classical galleries with artifacts and statues",
+    roomNames: ["Great Hall", "Egyptian Wing", "Greek Gallery", "Roman Court", "Medieval Hall", "Renaissance Room", "Modern Wing", "Archives"],
+    colors: {
+      floor: "#d4ccc4",
+      walls: "#e8e4e0",
+      accent: "#8b7355",
+      ambient: "#fff8f0",
+      nodeColors: ["#8B4513", "#CD853F", "#DEB887", "#D2691E", "#A0522D", "#BC8F8F", "#F4A460", "#DAA520"],
+    },
+    style: {
+      hasColumns: true,
+      hasDome: true,
+      hasTorches: false,
+      centralFeature: "globe",
+    },
+  },
+  garden: {
+    id: "garden",
+    name: "Enchanted Garden",
+    description: "Outdoor spaces with fountains and flowering paths",
+    roomNames: ["Rose Garden", "Zen Grove", "Lily Pond", "Hedge Maze", "Greenhouse", "Orchard", "Meadow", "Secret Garden"],
+    colors: {
+      floor: "#90a868",
+      walls: "#a8c090",
+      accent: "#6b8e23",
+      ambient: "#fffef5",
+      nodeColors: ["#228B22", "#32CD32", "#00FA9A", "#7CFC00", "#ADFF2F", "#9ACD32", "#6B8E23", "#556B2F"],
+    },
+    style: {
+      hasColumns: false,
+      hasDome: false,
+      hasTorches: false,
+      centralFeature: "fountain",
+    },
+  },
+  library: {
+    id: "library",
+    name: "Ancient Library",
+    description: "Towering bookshelves and cozy reading nooks",
+    roomNames: ["Main Reading Room", "Rare Books", "Map Room", "Periodicals", "Reference Hall", "Quiet Study", "Special Collections", "Archives"],
+    colors: {
+      floor: "#8b7355",
+      walls: "#d4c4a8",
+      accent: "#654321",
+      ambient: "#fff5e6",
+      nodeColors: ["#8B0000", "#A52A2A", "#B22222", "#DC143C", "#CD5C5C", "#F08080", "#E9967A", "#FA8072"],
+    },
+    style: {
+      hasColumns: true,
+      hasDome: true,
+      hasTorches: true,
+      centralFeature: "globe",
+    },
+  },
+};
+
 export interface MemoryNode {
   id: string;
   content: string;
@@ -25,36 +126,17 @@ interface MemoryPalaceState {
   rooms: Room[];
   selectedNodeId: string | null;
   inputContent: string;
+  selectedTemplate: PalaceTemplate;
 
   setPhase: (phase: AppPhase) => void;
   setInputContent: (content: string) => void;
+  setTemplate: (template: PalaceTemplate) => void;
   generatePalace: () => void;
   selectNode: (id: string | null) => void;
   updateNodeContent: (id: string, content: string) => void;
   reset: () => void;
+  getTemplateConfig: () => TemplateConfig;
 }
-
-const ROOM_COLORS = [
-  "#4F46E5",
-  "#7C3AED", 
-  "#EC4899",
-  "#F59E0B",
-  "#10B981",
-  "#06B6D4",
-  "#8B5CF6",
-  "#EF4444",
-];
-
-const ROOM_NAMES = [
-  "Entrance Hall",
-  "Library",
-  "Garden Room",
-  "Observatory",
-  "Treasury",
-  "Gallery",
-  "Study",
-  "Grand Hall",
-];
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
@@ -252,17 +334,26 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
     rooms: [],
     selectedNodeId: null,
     inputContent: "",
+    selectedTemplate: "mansion" as PalaceTemplate,
 
     setPhase: (phase) => set({ phase }),
 
     setInputContent: (content) => set({ inputContent: content }),
 
+    setTemplate: (template) => set({ selectedTemplate: template }),
+
+    getTemplateConfig: () => PALACE_TEMPLATES[get().selectedTemplate],
+
     generatePalace: () => {
-      const { inputContent } = get();
+      const { inputContent, selectedTemplate } = get();
       if (!inputContent.trim()) return;
 
+      const template = PALACE_TEMPLATES[selectedTemplate];
       const chunks = splitContentIntoChunks(inputContent);
-      const numRooms = Math.min(Math.ceil(chunks.length / 3), 4);
+      
+      if (chunks.length === 0) return;
+      
+      const numRooms = Math.max(1, Math.min(Math.ceil(chunks.length / 3), 4));
       
       const rooms: Room[] = [];
       const nodes: MemoryNode[] = [];
@@ -275,7 +366,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
 
         rooms.push({
           id: generateId(),
-          name: ROOM_NAMES[i % ROOM_NAMES.length],
+          name: template.roomNames[i % template.roomNames.length],
           position: [roomX, 0, roomZ],
           nodes: [],
         });
@@ -300,7 +391,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
           title,
           position: [nodeX, 1.5, nodeZ],
           roomIndex,
-          color: ROOM_COLORS[roomIndex % ROOM_COLORS.length],
+          color: template.colors.nodeColors[roomIndex % template.colors.nodeColors.length],
         });
 
         room.nodes.push(nodeId);
@@ -333,6 +424,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         rooms: [],
         selectedNodeId: null,
         inputContent: "",
+        selectedTemplate: "mansion",
       }),
   }))
 );

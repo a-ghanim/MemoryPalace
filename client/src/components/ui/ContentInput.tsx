@@ -1,9 +1,11 @@
-import { useMemoryPalace } from "@/lib/stores/useMemoryPalace";
+import { useMemoryPalace, PALACE_TEMPLATES, PalaceTemplate } from "@/lib/stores/useMemoryPalace";
 
 export default function ContentInput() {
   const inputContent = useMemoryPalace((state) => state.inputContent);
   const setInputContent = useMemoryPalace((state) => state.setInputContent);
   const generatePalace = useMemoryPalace((state) => state.generatePalace);
+  const selectedTemplate = useMemoryPalace((state) => state.selectedTemplate);
+  const setTemplate = useMemoryPalace((state) => state.setTemplate);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,8 +30,15 @@ Uranus rotates on its side at a 98-degree tilt, making it unique among planets, 
 
 Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest moon Triton orbits in the opposite direction.`;
 
+  const templateIcons: Record<PalaceTemplate, string> = {
+    mansion: "🏛️",
+    museum: "🏺",
+    garden: "🌳",
+    library: "📚",
+  };
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-auto py-8">
       <div className="w-full max-w-2xl mx-4 p-8 bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/20">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Memory Palace</h1>
@@ -38,6 +47,38 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
+            <label className="block text-sm font-medium text-purple-200 mb-3">
+              Choose your palace style
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {(Object.keys(PALACE_TEMPLATES) as PalaceTemplate[]).map((templateId) => {
+                const template = PALACE_TEMPLATES[templateId];
+                const isSelected = selectedTemplate === templateId;
+                return (
+                  <button
+                    key={templateId}
+                    type="button"
+                    onClick={() => setTemplate(templateId)}
+                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                      isSelected
+                        ? "border-purple-500 bg-purple-500/20"
+                        : "border-slate-600 bg-slate-700/50 hover:border-purple-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{templateIcons[templateId]}</span>
+                      <div>
+                        <div className="font-medium text-white">{template.name}</div>
+                        <div className="text-xs text-slate-400">{template.description}</div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
             <label htmlFor="content" className="block text-sm font-medium text-purple-200 mb-2">
               Enter content you want to memorize
             </label>
@@ -45,8 +86,8 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
               id="content"
               value={inputContent}
               onChange={(e) => setInputContent(e.target.value)}
-              placeholder="Paste your text here... (paragraphs or sentences will be split into memory nodes)"
-              className="w-full h-64 p-4 bg-slate-900/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              placeholder="Paste your text here... (paragraphs, lists, or sentences will be split into memory nodes)"
+              className="w-full h-48 p-4 bg-slate-900/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             />
           </div>
 
@@ -68,7 +109,7 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
           </div>
         </form>
 
-        <div className="mt-8 text-center text-sm text-slate-400">
+        <div className="mt-6 text-center text-sm text-slate-400">
           <p>Your content will be split into memory nodes placed throughout a 3D palace.</p>
           <p className="mt-1">Navigate with WASD keys and mouse to explore your memories.</p>
         </div>
