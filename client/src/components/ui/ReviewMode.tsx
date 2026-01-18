@@ -15,13 +15,13 @@ export default function ReviewMode() {
 
   if (!currentNode) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="bg-slate-800/80 p-8 rounded-2xl border border-purple-500/30 text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">Review Complete!</h2>
-          <p className="text-slate-300 mb-6">You've reviewed all items due for today.</p>
+      <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: '#f5f0e1' }}>
+        <div className="paper-card p-8 text-center">
+          <h2 className="text-3xl paper-title mb-4">Review Complete!</h2>
+          <p className="paper-text mb-6" style={{ color: '#555' }}>You've reviewed all items due for today.</p>
           <button
             onClick={() => setPhase("exploring")}
-            className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-medium transition-colors"
+            className="paper-btn paper-btn-primary"
           >
             Return to Palace
           </button>
@@ -38,27 +38,29 @@ export default function ReviewMode() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
-      <div className="p-4 flex items-center justify-between border-b border-purple-500/30">
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: '#f5f0e1' }}>
+      <div className="p-4 flex items-center justify-between" style={{ borderBottom: '2px dashed #ccc' }}>
         <div className="flex items-center gap-4">
           <button
             onClick={() => setPhase("exploring")}
-            className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+            className="paper-btn"
+            style={{ padding: '0.5rem 1rem' }}
           >
             ← Exit Review
           </button>
-          <span className="text-purple-400">
+          <span className="paper-text" style={{ color: '#555' }}>
             {currentReviewIndex + 1} / {reviewQueue.length}
           </span>
         </div>
-        <div className="text-slate-400">
+        <div className="paper-text" style={{ color: '#888' }}>
           {remaining} items remaining
         </div>
       </div>
 
-      <div className="w-full h-1 bg-slate-700">
+      <div className="w-full h-2" style={{ backgroundColor: '#ddd' }}>
         <motion.div
-          className="h-full bg-gradient-to-r from-purple-500 to-cyan-400"
+          className="h-full"
+          style={{ backgroundColor: '#2d2d2d' }}
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3 }}
@@ -73,20 +75,20 @@ export default function ReviewMode() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="bg-slate-800/60 backdrop-blur rounded-2xl border border-purple-500/30 p-8"
+              className="paper-card p-8"
             >
               <div className="mb-6">
                 <span
-                  className="inline-block px-3 py-1 rounded-full text-sm mb-4"
-                  style={{ backgroundColor: currentNode.color + "30", color: currentNode.color }}
+                  className="paper-tag mb-4 inline-block"
+                  style={{ borderColor: currentNode.color, color: currentNode.color }}
                 >
                   {currentNode.category || "Memory"}
                 </span>
-                <h2 className="text-2xl font-bold text-white mb-2">{currentNode.title}</h2>
+                <h2 className="text-2xl paper-title mb-2">{currentNode.title}</h2>
                 {currentNode.keywords && currentNode.keywords.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {currentNode.keywords.map((kw, i) => (
-                      <span key={i} className="px-2 py-1 bg-cyan-600/30 text-cyan-300 rounded text-xs">
+                      <span key={i} className="paper-tag" style={{ fontSize: '0.85rem' }}>
                         {kw}
                       </span>
                     ))}
@@ -96,52 +98,58 @@ export default function ReviewMode() {
 
               {!showAnswer ? (
                 <div className="text-center py-8">
-                  <p className="text-slate-400 mb-6">Try to recall the content...</p>
+                  <p className="paper-text mb-6" style={{ color: '#666' }}>Try to recall the content...</p>
                   {currentNode.mnemonic && (
-                    <p className="text-amber-400 italic mb-6">Hint: {currentNode.mnemonic}</p>
+                    <p className="paper-text italic mb-6" style={{ color: '#a70' }}>
+                      Hint: {currentNode.mnemonic}
+                    </p>
                   )}
                   <button
                     onClick={toggleShowAnswer}
-                    className="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-medium text-lg transition-colors"
+                    className="paper-btn paper-btn-primary text-lg"
+                    style={{ padding: '1rem 2rem' }}
                   >
                     Show Answer
                   </button>
                 </div>
               ) : (
                 <div>
-                  <div className="bg-slate-900/50 rounded-xl p-6 mb-8">
-                    <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  <div className="p-6 mb-8 rounded" style={{ backgroundColor: '#f8f5ec', border: '1px solid #ddd' }}>
+                    <p className="paper-text" style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                       {currentNode.content}
                     </p>
                   </div>
 
                   <div className="text-center">
-                    <p className="text-slate-400 mb-4">How well did you remember this?</p>
-                    <div className="flex justify-center gap-3">
+                    <p className="paper-text mb-4" style={{ color: '#666' }}>How well did you remember this?</p>
+                    <div className="flex justify-center gap-3 flex-wrap">
                       <button
                         onClick={() => handleSubmit("again")}
-                        className="px-6 py-3 bg-red-600/80 hover:bg-red-500 text-white rounded-lg font-medium transition-colors"
+                        className="paper-btn paper-btn-danger"
                       >
                         Again
                         <span className="block text-xs opacity-70">&lt;1 min</span>
                       </button>
                       <button
                         onClick={() => handleSubmit("hard")}
-                        className="px-6 py-3 bg-orange-600/80 hover:bg-orange-500 text-white rounded-lg font-medium transition-colors"
+                        className="paper-btn"
+                        style={{ borderColor: '#c80', color: '#c80', boxShadow: '3px 3px 0 #c80' }}
                       >
                         Hard
                         <span className="block text-xs opacity-70">1 day</span>
                       </button>
                       <button
                         onClick={() => handleSubmit("good")}
-                        className="px-6 py-3 bg-green-600/80 hover:bg-green-500 text-white rounded-lg font-medium transition-colors"
+                        className="paper-btn"
+                        style={{ borderColor: '#2a6', color: '#2a6', boxShadow: '3px 3px 0 #2a6' }}
                       >
                         Good
                         <span className="block text-xs opacity-70">~1 week</span>
                       </button>
                       <button
                         onClick={() => handleSubmit("easy")}
-                        className="px-6 py-3 bg-cyan-600/80 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors"
+                        className="paper-btn"
+                        style={{ borderColor: '#28a', color: '#28a', boxShadow: '3px 3px 0 #28a' }}
                       >
                         Easy
                         <span className="block text-xs opacity-70">~2 weeks</span>
@@ -154,7 +162,7 @@ export default function ReviewMode() {
           </AnimatePresence>
 
           {currentNode.srs && (
-            <div className="mt-4 text-center text-slate-500 text-sm">
+            <div className="mt-4 text-center paper-text" style={{ color: '#888' }}>
               Streak: {currentNode.srs.streak} | Reviews: {currentNode.srs.repetitions}
             </div>
           )}

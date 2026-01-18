@@ -43,27 +43,23 @@ canvas {
 
   .paper-card {
     background-color: #fefcf3;
-    border: 2px solid #2d2d2d;
+    border: 3px solid #2d2d2d;
     border-radius: 3px;
     box-shadow: 
-      4px 4px 0 #2d2d2d,
-      inset 0 0 40px rgba(0,0,0,0.02);
+      5px 5px 0 #2d2d2d,
+      0 0 20px rgba(0,0,0,0.3);
     position: relative;
   }
 
-  .paper-card::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    border: 2px solid transparent;
-    border-radius: 5px;
-    background: 
-      linear-gradient(45deg, transparent 48%, #2d2d2d 49%, #2d2d2d 51%, transparent 52%) -2px -2px / 8px 8px repeat;
-    pointer-events: none;
-    opacity: 0.3;
+  .paper-card-overlay {
+    background-color: rgba(254, 252, 243, 0.97);
+    border: 3px solid #2d2d2d;
+    border-radius: 3px;
+    box-shadow: 
+      5px 5px 0 #2d2d2d,
+      0 0 30px rgba(0,0,0,0.4);
+    backdrop-filter: blur(4px);
+    position: relative;
   }
 
   .paper-btn {
@@ -79,14 +75,24 @@ canvas {
     transition: all 0.1s ease;
   }
 
-  .paper-btn:hover {
+  .paper-btn:hover:not(:disabled) {
     transform: translate(1px, 1px);
     box-shadow: 2px 2px 0 #2d2d2d;
   }
 
-  .paper-btn:active {
+  .paper-btn:active:not(:disabled) {
     transform: translate(3px, 3px);
     box-shadow: 0px 0px 0 #2d2d2d;
+  }
+
+  .paper-btn:focus {
+    outline: 2px dashed #2d2d2d;
+    outline-offset: 3px;
+  }
+
+  .paper-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .paper-btn-primary {
@@ -94,8 +100,12 @@ canvas {
     color: #fefcf3;
   }
 
-  .paper-btn-primary:hover {
+  .paper-btn-primary:hover:not(:disabled) {
     background-color: #3d3d3d;
+  }
+
+  .paper-btn-primary:focus {
+    outline: 2px dashed #fefcf3;
   }
 
   .paper-btn-danger {
@@ -105,8 +115,12 @@ canvas {
     box-shadow: 3px 3px 0 #c44;
   }
 
-  .paper-btn-danger:hover {
+  .paper-btn-danger:hover:not(:disabled) {
     box-shadow: 2px 2px 0 #c44;
+  }
+
+  .paper-btn-danger:focus {
+    outline: 2px dashed #c44;
   }
 
   .paper-input {

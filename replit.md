@@ -92,3 +92,9 @@ Run `npm run dev` to start the development server on port 5000.
     - Real-time player position sync
     - Remote player avatars rendered in 3D scene
     - Player names displayed above avatars
+  - Refactored UI to paper wireframe design aesthetic
+    - Hand-drawn fonts (Patrick Hand, Caveat)
+    - Sketchy borders with offset shadows
+    - Cream/off-white paper backgrounds
+    - Improved contrast for 3D scene overlays
+    - Accessible focus and disabled states

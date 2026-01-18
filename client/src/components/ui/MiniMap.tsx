@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useMemoryPalace, PALACE_TEMPLATES } from "@/lib/stores/useMemoryPalace";
+import { useMemoryPalace } from "@/lib/stores/useMemoryPalace";
 
 interface MiniMapProps {
   playerPosition: [number, number, number];
@@ -9,11 +9,8 @@ interface MiniMapProps {
 export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps) {
   const rooms = useMemoryPalace((state) => state.rooms);
   const nodes = useMemoryPalace((state) => state.nodes);
-  const selectedTemplate = useMemoryPalace((state) => state.selectedTemplate);
   const selectedNodeId = useMemoryPalace((state) => state.selectedNodeId);
   const selectNode = useMemoryPalace((state) => state.selectNode);
-  
-  const config = PALACE_TEMPLATES[selectedTemplate];
   
   const mapSize = 140;
   const worldScale = 2.5;
@@ -43,13 +40,16 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
 
   return (
     <div
-      className="fixed bottom-4 left-4 rounded-lg overflow-hidden border-2 border-purple-500/40 shadow-xl"
+      className="fixed bottom-4 left-4 overflow-hidden"
       style={{
         width: mapSize,
         height: mapSize,
-        background: "rgba(15, 10, 25, 0.85)",
-        backdropFilter: "blur(4px)",
+        backgroundColor: 'rgba(254, 252, 243, 0.95)',
+        border: '3px solid #2d2d2d',
+        borderRadius: '3px',
+        boxShadow: '4px 4px 0 #2d2d2d, 0 0 20px rgba(0,0,0,0.3)',
         pointerEvents: "auto",
+        backdropFilter: 'blur(4px)',
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
@@ -58,8 +58,8 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
           cx={centerOffset}
           cy={centerOffset}
           r={12}
-          fill={config.colors.accent}
-          opacity={0.4}
+          fill="#2d2d2d"
+          opacity={0.2}
         />
         
         {roomPositions.map((room) => (
@@ -69,9 +69,9 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
               y1={centerOffset}
               x2={room.mapPos[0]}
               y2={room.mapPos[1]}
-              stroke={config.colors.floor}
-              strokeWidth={4}
-              opacity={0.5}
+              stroke="#2d2d2d"
+              strokeWidth={3}
+              opacity={0.3}
             />
           </g>
         ))}
@@ -82,10 +82,9 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
               cx={room.mapPos[0]}
               cy={room.mapPos[1]}
               r={16}
-              fill={config.colors.walls}
-              opacity={0.6}
-              stroke={config.colors.accent}
-              strokeWidth={1}
+              fill="#f0e6d2"
+              stroke="#2d2d2d"
+              strokeWidth={2}
             />
           </g>
         ))}
@@ -96,8 +95,8 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
               cx={node.mapPos[0]}
               cy={node.mapPos[1]}
               r={selectedNodeId === node.id ? 5 : 3}
-              fill={node.color}
-              stroke={selectedNodeId === node.id ? "#ffffff" : "transparent"}
+              fill={selectedNodeId === node.id ? "#2d2d2d" : "#666"}
+              stroke={selectedNodeId === node.id ? "#2d2d2d" : "transparent"}
               strokeWidth={1}
               style={{ cursor: "pointer" }}
               onClick={() => selectNode(node.id)}
@@ -108,14 +107,21 @@ export default function MiniMap({ playerPosition, playerRotation }: MiniMapProps
         <g transform={`translate(${playerMapX}, ${playerMapY}) rotate(${(playerRotation * 180) / Math.PI + 90})`}>
           <polygon
             points="0,-6 4,4 0,2 -4,4"
-            fill="#22d3ee"
-            stroke="#0e7490"
+            fill="#2d2d2d"
+            stroke="#fefcf3"
             strokeWidth={1}
           />
         </g>
       </svg>
 
-      <div className="absolute top-1 right-1 text-[8px] text-slate-400 font-medium">
+      <div 
+        className="absolute top-1 right-1 font-bold"
+        style={{ 
+          fontSize: '10px', 
+          color: '#888',
+          fontFamily: "'Patrick Hand', cursive"
+        }}
+      >
         MAP
       </div>
     </div>

@@ -53,23 +53,25 @@ export default function ExplorerHUD() {
 
   return (
     <>
-      <div className="fixed top-4 left-4 p-4 bg-slate-900/80 backdrop-blur-sm rounded-lg border border-purple-500/20 text-white max-w-xs">
-        <h2 className="text-lg font-bold text-purple-300 mb-2">Memory Palace</h2>
-        <div className="text-sm text-slate-300 space-y-1">
+      <div className="fixed top-4 left-4 p-4 paper-card-overlay max-w-xs">
+        <h2 className="text-xl paper-title mb-2">Memory Palace</h2>
+        <div className="paper-text space-y-1" style={{ color: '#555' }}>
           <p>{rooms.length} rooms</p>
           <p>{nodes.length} memory nodes</p>
           {currentPalaceId && (
-            <p className="text-green-400 text-xs">Saved</p>
+            <p style={{ color: '#2a6' }}>✓ Saved</p>
           )}
         </div>
-        <div className="mt-4 space-y-2">
+        <hr className="paper-divider" />
+        <div className="space-y-2">
           {getDueCount() > 0 && (
             <button
               onClick={startReviewSession}
-              className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-500 rounded text-sm transition-colors flex items-center justify-center gap-2"
+              className="w-full paper-btn flex items-center justify-center gap-2"
+              style={{ borderColor: '#2a6', color: '#2a6', boxShadow: '3px 3px 0 #2a6' }}
             >
               <span>Review</span>
-              <span className="bg-cyan-400/30 px-2 py-0.5 rounded-full text-xs">
+              <span className="paper-tag" style={{ fontSize: '0.8rem', padding: '0.1rem 0.5rem' }}>
                 {getDueCount()} due
               </span>
             </button>
@@ -77,62 +79,62 @@ export default function ExplorerHUD() {
           <button
             onClick={() => setShowSaveDialog(true)}
             disabled={isLoading}
-            className="w-full py-2 px-4 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 rounded text-sm transition-colors"
+            className="w-full paper-btn paper-btn-primary disabled:opacity-50"
           >
             {isLoading ? "Saving..." : currentPalaceId ? "Update Palace" : "Save Palace"}
           </button>
           <button
             onClick={reset}
-            className="w-full py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors"
+            className="w-full paper-btn"
           >
             New Palace
           </button>
         </div>
       </div>
 
-      <div className="fixed top-4 right-4 p-4 bg-slate-900/80 backdrop-blur-sm rounded-lg border border-purple-500/20 text-white max-w-xs">
-        <h3 className="text-sm font-medium text-purple-300 mb-2">Controls</h3>
-        <div className="text-xs text-slate-400 space-y-1">
-          <p><span className="text-white">WASD</span> - Move</p>
-          <p><span className="text-white">Mouse</span> - Look around</p>
-          <p><span className="text-white">Click</span> - Select node</p>
-          <p><span className="text-white">ESC</span> - Release mouse</p>
+      <div className="fixed top-4 right-4 p-4 paper-card-overlay max-w-xs">
+        <h3 className="paper-title text-lg mb-2">Controls</h3>
+        <div className="paper-text space-y-1" style={{ fontSize: '0.9rem', color: '#555' }}>
+          <p><strong>WASD</strong> - Move</p>
+          <p><strong>Mouse</strong> - Look around</p>
+          <p><strong>Click</strong> - Select node</p>
+          <p><strong>ESC</strong> - Release mouse</p>
         </div>
       </div>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-slate-900/60 px-4 py-2 rounded-full">
-        Click anywhere to start exploring
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 paper-card-overlay px-6 py-2">
+        <span className="paper-text">Click anywhere to start exploring</span>
       </div>
 
       {showSaveDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSaveDialog(false)}>
-          <div className="bg-slate-800 p-6 rounded-xl border border-purple-500/30 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={() => setShowSaveDialog(false)}>
+          <div className="paper-card p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
             {saveSuccess ? (
               <div className="text-center py-4">
                 <div className="text-4xl mb-2">✓</div>
-                <p className="text-green-400 font-medium">Palace Saved!</p>
+                <p className="paper-text font-bold" style={{ color: '#2a6' }}>Palace Saved!</p>
               </div>
             ) : (
               <>
-                <h3 className="text-lg font-bold text-white mb-4">Save Palace</h3>
+                <h3 className="text-xl paper-title mb-4">Save Palace</h3>
                 <input
                   type="text"
                   value={palaceName}
                   onChange={(e) => setPalaceName(e.target.value)}
                   placeholder="Enter palace name..."
-                  className="w-full p-3 bg-slate-900 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 mb-4"
+                  className="paper-input mb-4"
                 />
                 <div className="flex gap-3">
                   <button
                     onClick={handleSavePalace}
                     disabled={isLoading}
-                    className="flex-1 py-2 px-4 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-800 rounded text-white transition-colors"
+                    className="flex-1 paper-btn paper-btn-primary disabled:opacity-50"
                   >
                     {isLoading ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => setShowSaveDialog(false)}
-                    className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded text-white transition-colors"
+                    className="flex-1 paper-btn"
                   >
                     Cancel
                   </button>
@@ -144,12 +146,12 @@ export default function ExplorerHUD() {
       )}
 
       {selectedNode && (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-6 bg-slate-900/90 backdrop-blur-lg rounded-xl border border-purple-500/30 text-white">
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 p-6 paper-card-overlay">
           <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-bold text-purple-300">Memory Node</h3>
+            <h3 className="text-xl paper-title">Memory Node</h3>
             <button
               onClick={() => selectNode(null)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="paper-text hover:opacity-60 transition-opacity text-xl"
             >
               ✕
             </button>
@@ -160,19 +162,20 @@ export default function ExplorerHUD() {
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent(e.target.value)}
-                className="w-full h-32 p-3 bg-slate-800 border border-purple-500/30 rounded-lg text-white resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="paper-input resize-none"
+                style={{ height: '8rem' }}
                 autoFocus
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleSaveEdit}
-                  className="flex-1 py-2 px-4 bg-purple-600 hover:bg-purple-500 rounded text-sm transition-colors"
+                  className="flex-1 paper-btn paper-btn-primary"
                 >
                   Save
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="flex-1 py-2 px-4 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors"
+                  className="flex-1 paper-btn"
                 >
                   Cancel
                 </button>
@@ -181,45 +184,52 @@ export default function ExplorerHUD() {
           ) : (
             <>
               <div className="mb-3">
-                <h4 className="text-sm font-semibold text-white mb-1">{selectedNode.title}</h4>
+                <h4 className="paper-text font-bold text-lg">{selectedNode.title}</h4>
                 {selectedNode.category && (
-                  <span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-600/50 text-purple-200">
+                  <span className="paper-tag" style={{ marginTop: '0.5rem' }}>
                     {selectedNode.category}
                   </span>
                 )}
               </div>
               
               <div
-                className="p-4 bg-slate-800/50 rounded-lg border-l-4 max-h-32 overflow-y-auto"
-                style={{ borderColor: selectedNode.color }}
+                className="p-4 rounded max-h-32 overflow-y-auto"
+                style={{ 
+                  backgroundColor: '#f8f5ec',
+                  borderLeft: `4px solid ${selectedNode.color}`,
+                  border: '1px solid #ddd'
+                }}
               >
-                <p className="text-slate-200 leading-relaxed text-sm">{selectedNode.content}</p>
+                <p className="paper-text" style={{ lineHeight: 1.6 }}>{selectedNode.content}</p>
               </div>
               
               {selectedNode.mnemonic && (
-                <div className="mt-3 p-3 bg-amber-900/30 rounded-lg border border-amber-600/30">
-                  <p className="text-xs text-amber-300 font-medium mb-1">Memory Trick</p>
-                  <p className="text-sm text-amber-100">{selectedNode.mnemonic}</p>
+                <div className="mt-3 p-3 rounded" style={{ backgroundColor: '#fff8e7', border: '1px dashed #c90' }}>
+                  <p className="paper-text font-bold" style={{ fontSize: '0.85rem', color: '#a70' }}>Memory Trick</p>
+                  <p className="paper-text">{selectedNode.mnemonic}</p>
                 </div>
               )}
               
               {selectedNode.keywords && selectedNode.keywords.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">
                   {selectedNode.keywords.map((keyword, i) => (
-                    <span key={i} className="px-2 py-0.5 text-xs bg-slate-700 text-slate-300 rounded">
+                    <span key={i} className="paper-tag" style={{ fontSize: '0.8rem' }}>
                       {keyword}
                     </span>
                   ))}
                 </div>
               )}
               
-              <div className="mt-4 flex justify-between items-center">
-                <span className="text-xs text-slate-500">
+              <hr className="paper-divider" />
+              
+              <div className="flex justify-between items-center">
+                <span className="paper-text" style={{ fontSize: '0.85rem', color: '#888' }}>
                   Room: {rooms[selectedNode.roomIndex]?.name || "Unknown"}
                 </span>
                 <button
                   onClick={handleStartEdit}
-                  className="py-1 px-3 bg-slate-700 hover:bg-slate-600 rounded text-xs transition-colors"
+                  className="paper-btn"
+                  style={{ padding: '0.25rem 0.75rem', fontSize: '0.9rem' }}
                 >
                   Edit
                 </button>

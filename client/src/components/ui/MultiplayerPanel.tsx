@@ -43,26 +43,32 @@ export default function MultiplayerPanel() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700/80 backdrop-blur-sm text-white rounded-full border border-purple-500/30 text-sm transition-colors flex items-center gap-2"
+        className="fixed top-4 left-1/2 -translate-x-1/2 paper-btn flex items-center gap-2"
+        style={{ boxShadow: '3px 3px 0 #2d2d2d, 0 0 15px rgba(0,0,0,0.3)' }}
       >
-        <span className={`w-2 h-2 rounded-full ${connected ? (roomId ? "bg-green-400" : "bg-yellow-400") : "bg-slate-500"}`} />
+        <span 
+          className="w-2 h-2 rounded-full" 
+          style={{ 
+            backgroundColor: connected ? (roomId ? '#2a6' : '#ca0') : '#888'
+          }} 
+        />
         {roomId ? `${remotePlayers.length + 1} in room` : "Multiplayer"}
       </button>
 
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="bg-slate-800 rounded-xl border border-purple-500/30 p-6 max-w-md w-full mx-4"
+            className="paper-card p-6 max-w-md w-full mx-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-white">Multiplayer</h2>
+              <h2 className="text-2xl paper-title">Multiplayer</h2>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="paper-text hover:opacity-60 transition-opacity text-xl"
               >
                 ✕
               </button>
@@ -71,30 +77,30 @@ export default function MultiplayerPanel() {
             {!roomId ? (
               <>
                 <div className="mb-4">
-                  <label className="block text-sm text-slate-300 mb-2">Your Name</label>
+                  <span className="paper-label">Your Name</span>
                   <input
                     type="text"
                     value={playerName}
                     onChange={(e) => setPlayerName(e.target.value)}
                     placeholder="Enter your name..."
-                    className="w-full p-3 bg-slate-900 border border-purple-500/30 rounded-lg text-white placeholder-slate-500"
+                    className="paper-input"
                   />
                 </div>
 
                 <div className="mb-6">
-                  <label className="block text-sm text-slate-300 mb-2">Create a Room</label>
+                  <span className="paper-label">Create a Room</span>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={roomName}
                       onChange={(e) => setRoomName(e.target.value)}
                       placeholder="Room name..."
-                      className="flex-1 p-3 bg-slate-900 border border-purple-500/30 rounded-lg text-white placeholder-slate-500"
+                      className="paper-input flex-1"
                     />
                     <button
                       onClick={handleCreateRoom}
                       disabled={!roomName.trim() || !playerName.trim()}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 rounded-lg text-white transition-colors"
+                      className="paper-btn paper-btn-primary disabled:opacity-50"
                     >
                       Create
                     </button>
@@ -103,17 +109,17 @@ export default function MultiplayerPanel() {
 
                 {availableRooms.length > 0 && (
                   <div>
-                    <label className="block text-sm text-slate-300 mb-2">Join a Room</label>
+                    <span className="paper-label">Join a Room</span>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {availableRooms.map((room) => (
                         <button
                           key={room.id}
                           onClick={() => handleJoinRoom(room.id)}
                           disabled={!playerName.trim()}
-                          className="w-full p-3 bg-slate-700/50 hover:bg-slate-600/50 disabled:opacity-50 rounded-lg text-left transition-colors flex justify-between items-center"
+                          className="w-full paper-btn text-left flex justify-between items-center disabled:opacity-50"
                         >
-                          <span className="text-white">{room.name}</span>
-                          <span className="text-slate-400 text-sm">
+                          <span>{room.name}</span>
+                          <span style={{ color: '#888', fontSize: '0.9rem' }}>
                             {room.playerCount} player{room.playerCount !== 1 ? "s" : ""}
                           </span>
                         </button>
@@ -123,38 +129,38 @@ export default function MultiplayerPanel() {
                 )}
 
                 {availableRooms.length === 0 && connected && (
-                  <p className="text-slate-400 text-center py-4">
+                  <p className="paper-text text-center py-4" style={{ color: '#888' }}>
                     No rooms available. Create one to get started!
                   </p>
                 )}
               </>
             ) : (
               <>
-                <div className="mb-6 p-4 bg-slate-700/50 rounded-lg">
+                <div className="mb-6 p-4 rounded" style={{ backgroundColor: '#f8f5ec', border: '1px solid #ddd' }}>
                   <div className="flex justify-between items-center">
                     <div>
-                      <h3 className="text-white font-medium">{currentRoomName}</h3>
-                      <p className="text-slate-400 text-sm">
+                      <h3 className="paper-text font-bold">{currentRoomName}</h3>
+                      <p className="paper-text" style={{ color: '#888', fontSize: '0.9rem' }}>
                         {isHost ? "You are the host" : "Connected to room"}
                       </p>
                     </div>
-                    <span className="text-green-400 text-sm">● Live</span>
+                    <span className="paper-text" style={{ color: '#2a6' }}>● Live</span>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="text-sm text-slate-300 mb-2">
+                  <span className="paper-label">
                     Players ({remotePlayers.length + 1})
-                  </h4>
+                  </span>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 p-2 bg-slate-700/30 rounded-lg">
+                    <div className="flex items-center gap-2 p-2 rounded" style={{ backgroundColor: '#f8f5ec' }}>
                       <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: useMultiplayer.getState().playerColor }}
                       />
-                      <span className="text-white">{playerName} (You)</span>
+                      <span className="paper-text">{playerName} (You)</span>
                       {isHost && (
-                        <span className="text-xs bg-purple-600 px-2 py-0.5 rounded text-white">
+                        <span className="paper-tag" style={{ fontSize: '0.75rem', padding: '0.1rem 0.5rem' }}>
                           Host
                         </span>
                       )}
@@ -162,13 +168,14 @@ export default function MultiplayerPanel() {
                     {remotePlayers.map((player) => (
                       <div
                         key={player.id}
-                        className="flex items-center gap-2 p-2 bg-slate-700/30 rounded-lg"
+                        className="flex items-center gap-2 p-2 rounded"
+                        style={{ backgroundColor: '#f8f5ec' }}
                       >
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: player.color }}
                         />
-                        <span className="text-white">{player.name}</span>
+                        <span className="paper-text">{player.name}</span>
                       </div>
                     ))}
                   </div>
@@ -176,27 +183,28 @@ export default function MultiplayerPanel() {
 
                 <button
                   onClick={leaveRoom}
-                  className="w-full py-2 px-4 bg-red-600/80 hover:bg-red-500 text-white rounded-lg transition-colors"
+                  className="w-full paper-btn paper-btn-danger"
                 >
                   Leave Room
                 </button>
               </>
             )}
 
-            <div className="mt-4 pt-4 border-t border-slate-700">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-400">
-                  {connected ? "Connected" : "Connecting..."}
-                </span>
-                {connected && !roomId && (
-                  <button
-                    onClick={disconnect}
-                    className="text-slate-400 hover:text-white transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                )}
-              </div>
+            <hr className="paper-divider" />
+            
+            <div className="flex items-center justify-between">
+              <span className="paper-text" style={{ color: '#888', fontSize: '0.9rem' }}>
+                {connected ? "Connected" : "Connecting..."}
+              </span>
+              {connected && !roomId && (
+                <button
+                  onClick={disconnect}
+                  className="paper-text hover:opacity-60 transition-opacity"
+                  style={{ color: '#888', fontSize: '0.9rem' }}
+                >
+                  Disconnect
+                </button>
+              )}
             </div>
           </div>
         </div>

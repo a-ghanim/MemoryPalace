@@ -50,11 +50,11 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
   };
 
   const layoutOptions: { id: LayoutAlgorithm; name: string; icon: string }[] = [
-    { id: "circular", name: "Circular", icon: "◯" },
+    { id: "circular", name: "Circular", icon: "○" },
     { id: "linear", name: "Linear", icon: "—" },
-    { id: "spiral", name: "Spiral", icon: "🌀" },
-    { id: "grid", name: "Grid", icon: "⊞" },
-    { id: "random", name: "Random", icon: "✦" },
+    { id: "spiral", name: "Spiral", icon: "@" },
+    { id: "grid", name: "Grid", icon: "#" },
+    { id: "random", name: "Random", icon: "?" },
   ];
 
   const handleDeletePalace = async (id: number, e: React.MouseEvent) => {
@@ -65,40 +65,43 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 overflow-auto py-8">
-      <div className="w-full max-w-3xl mx-4 p-8 bg-slate-800/80 backdrop-blur-lg rounded-2xl shadow-2xl border border-purple-500/20">
+    <div className="fixed inset-0 flex items-center justify-center overflow-auto py-8" style={{ backgroundColor: '#f5f0e1' }}>
+      <div className="w-full max-w-3xl mx-4 p-8 paper-card">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Memory Palace</h1>
-          <p className="text-purple-300">Transform your content into a navigable 3D space</p>
+          <h1 className="text-5xl paper-title mb-2">Memory Palace</h1>
+          <p className="paper-text text-lg" style={{ color: '#666' }}>
+            Transform your content into a navigable 3D space
+          </p>
         </div>
 
         {savedPalaces.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-purple-200 mb-3">Your Saved Palaces</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+            <span className="paper-label">Your Saved Palaces</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-40 overflow-y-auto">
               {savedPalaces.map((palace) => (
                 <button
                   key={palace.id}
                   onClick={() => loadPalace(palace.id)}
                   disabled={isLoading}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg border border-slate-600 transition-colors group text-left"
+                  className="paper-btn text-left flex items-center justify-between group"
+                  style={{ padding: '0.75rem 1rem' }}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-lg">{templateIcons[palace.template as PalaceTemplate] || "🏛️"}</span>
                     <div className="min-w-0">
-                      <div className="text-white text-sm font-medium truncate">{palace.name}</div>
-                      <div className="text-slate-400 text-xs">
+                      <div className="font-medium truncate">{palace.name}</div>
+                      <div style={{ color: '#888', fontSize: '0.85rem' }}>
                         {new Date(palace.updatedAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
-                  <button
+                  <span
                     onClick={(e) => handleDeletePalace(palace.id, e)}
-                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-red-600"
                     title="Delete palace"
                   >
                     ✕
-                  </button>
+                  </span>
                 </button>
               ))}
             </div>
@@ -107,9 +110,7 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-purple-200 mb-3">
-              Choose your palace style
-            </label>
+            <span className="paper-label">Choose your palace style</span>
             <div className="grid grid-cols-2 gap-3">
               {(Object.keys(PALACE_TEMPLATES) as PalaceTemplate[]).map((templateId) => {
                 const template = PALACE_TEMPLATES[templateId];
@@ -119,17 +120,14 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
                     key={templateId}
                     type="button"
                     onClick={() => setTemplate(templateId)}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
-                      isSelected
-                        ? "border-purple-500 bg-purple-500/20"
-                        : "border-slate-600 bg-slate-700/50 hover:border-purple-400"
-                    }`}
+                    className={`paper-btn text-left ${isSelected ? 'paper-btn-primary' : ''}`}
+                    style={{ padding: '1rem' }}
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{templateIcons[templateId]}</span>
                       <div>
-                        <div className="font-medium text-white">{template.name}</div>
-                        <div className="text-xs text-slate-400">{template.description}</div>
+                        <div className="font-medium">{template.name}</div>
+                        <div style={{ fontSize: '0.85rem', opacity: 0.7 }}>{template.description}</div>
                       </div>
                     </div>
                   </button>
@@ -139,30 +137,25 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-purple-200 mb-3">
-              Layout pattern
-            </label>
+            <span className="paper-label">Layout pattern</span>
             <div className="flex gap-2">
               {layoutOptions.map((layout) => (
                 <button
                   key={layout.id}
                   type="button"
                   onClick={() => setLayoutAlgorithm(layout.id)}
-                  className={`flex-1 py-2 px-3 rounded-lg border transition-all text-center ${
-                    layoutAlgorithm === layout.id
-                      ? "border-cyan-500 bg-cyan-500/20 text-cyan-300"
-                      : "border-slate-600 bg-slate-700/50 text-slate-300 hover:border-cyan-400"
-                  }`}
+                  className={`flex-1 paper-btn text-center ${layoutAlgorithm === layout.id ? 'paper-btn-primary' : ''}`}
+                  style={{ padding: '0.5rem' }}
                 >
-                  <div className="text-lg">{layout.icon}</div>
-                  <div className="text-xs">{layout.name}</div>
+                  <div className="text-xl font-mono">{layout.icon}</div>
+                  <div style={{ fontSize: '0.85rem' }}>{layout.name}</div>
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label htmlFor="content" className="block text-sm font-medium text-purple-200 mb-2">
+            <label htmlFor="content" className="paper-label">
               Enter content you want to memorize
             </label>
             <textarea
@@ -170,7 +163,8 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
               value={inputContent}
               onChange={(e) => setInputContent(e.target.value)}
               placeholder="Paste your text here... (paragraphs, lists, or sentences will be split into memory nodes)"
-              className="w-full h-48 p-4 bg-slate-900/50 border border-purple-500/30 rounded-lg text-white placeholder-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              className="paper-input resize-none"
+              style={{ height: '12rem' }}
             />
           </div>
 
@@ -178,21 +172,23 @@ Neptune is the windiest planet with storms reaching 2,100 km/h, and its largest 
             <button
               type="button"
               onClick={() => setInputContent(sampleContent)}
-              className="flex-1 py-3 px-6 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 paper-btn"
             >
               Load Sample
             </button>
             <button
               type="submit"
               disabled={!inputContent.trim() || isLoading}
-              className="flex-1 py-3 px-6 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+              className="flex-1 paper-btn paper-btn-primary disabled:opacity-50"
             >
-              {isLoading ? "Loading..." : "Build Palace"}
+              {isLoading ? "Building..." : "Build Palace"}
             </button>
           </div>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-400">
+        <hr className="paper-divider" />
+
+        <div className="text-center paper-text" style={{ color: '#666' }}>
           <p>Your content will be split into memory nodes placed throughout a 3D palace.</p>
           <p className="mt-1">Navigate with WASD keys and mouse to explore your memories.</p>
         </div>
