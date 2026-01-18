@@ -2,9 +2,9 @@ import * as THREE from "three";
 import { useRef, useMemo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useTexture, Sky, Stars } from "@react-three/drei";
-import { useMemoryPalace, Room, PALACE_TEMPLATES, TemplateConfig } from "@/lib/stores/useMemoryPalace";
+import { useMemoryPalace, Room, PALACE_TEMPLATES, TemplateConfig, LayoutAlgorithm } from "@/lib/stores/useMemoryPalace";
 
-function TexturedFloor({ config }: { config: TemplateConfig }) {
+function TexturedFloor({ config, layoutAlgorithm }: { config: TemplateConfig; layoutAlgorithm: LayoutAlgorithm }) {
   const grassTexture = useTexture("/textures/grass.png");
   const sandTexture = useTexture("/textures/sand.jpg");
   const woodTexture = useTexture("/textures/wood.jpg");
@@ -28,18 +28,118 @@ function TexturedFloor({ config }: { config: TemplateConfig }) {
 
   const isOutdoor = config.id === "garden";
 
+  const gardenPaths = useMemo(() => {
+    if (!isOutdoor) return null;
+    
+    switch (layoutAlgorithm) {
+      case "circular":
+        return { type: "circular" as const, radii: [15, 30, 45, 60] };
+      case "linear":
+        return { type: "linear" as const, length: 80 };
+      case "grid":
+        return { type: "grid" as const, size: 70, spacing: 18 };
+      case "spiral":
+        return { type: "spiral" as const, turns: 4, maxRadius: 60 };
+      case "random":
+      default:
+        return { type: "circular" as const, radii: [20, 40] };
+    }
+  }, [isOutdoor, layoutAlgorithm]);
+
   return (
     <group>
       {isOutdoor ? (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-          <circleGeometry args={[120, 128]} />
-          <meshStandardMaterial 
-            map={grassTexture}
-            color="#66aa55"
-            roughness={0.95}
-            metalness={0}
-          />
-        </mesh>
+        <>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
+            <circleGeometry args={[120, 128]} />
+            <meshStandardMaterial 
+              map={grassTexture}
+              color="#66aa55"
+              roughness={0.95}
+              metalness={0}
+            />
+          </mesh>
+          
+          {gardenPaths?.type === "circular" && gardenPaths.radii.map((radius, i) => (
+            <mesh key={`path-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+              <ringGeometry args={[radius - 1.2, radius + 1.2, 64]} />
+              <meshStandardMaterial 
+                map={sandTexture}
+                color="#c9b896"
+                roughness={0.85}
+                metalness={0}
+              />
+            </mesh>
+          ))}
+
+          {gardenPaths?.type === "linear" && (
+            <>
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+                <planeGeometry args={[gardenPaths.length * 2, 4]} />
+                <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.85} />
+              </mesh>
+              {[-30, -15, 0, 15, 30].map((z, i) => (
+                <mesh key={`side-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, z]} receiveShadow>
+                  <planeGeometry args={[3, 20]} />
+                  <meshStandardMaterial map={sandTexture} color="#d4c4a0" roughness={0.85} />
+                </mesh>
+              ))}
+            </>
+          )}
+
+          {gardenPaths?.type === "grid" && (
+            <>
+              {Array.from({ length: 7 }).map((_, i) => {
+                const offset = (i - 3) * gardenPaths.spacing;
+                return (
+                  <group key={`grid-${i}`}>
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[offset, 0.01, 0]} receiveShadow>
+                      <planeGeometry args={[2.5, gardenPaths.size]} />
+                      <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.85} />
+                    </mesh>
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, offset]} receiveShadow>
+                      <planeGeometry args={[gardenPaths.size, 2.5]} />
+                      <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.85} />
+                    </mesh>
+                  </group>
+                );
+              })}
+            </>
+          )}
+
+          {gardenPaths?.type === "spiral" && (
+            <>
+              {Array.from({ length: 60 }).map((_, i) => {
+                const angle = (i / 60) * Math.PI * 2 * gardenPaths.turns;
+                const radius = 5 + (i / 60) * gardenPaths.maxRadius;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                const nextAngle = ((i + 1) / 60) * Math.PI * 2 * gardenPaths.turns;
+                const nextRadius = 5 + ((i + 1) / 60) * gardenPaths.maxRadius;
+                const rotation = Math.atan2(
+                  Math.sin(nextAngle) * nextRadius - z,
+                  Math.cos(nextAngle) * nextRadius - x
+                );
+                return (
+                  <mesh key={`spiral-${i}`} rotation={[-Math.PI / 2, rotation, 0]} position={[x, 0.01, z]} receiveShadow>
+                    <planeGeometry args={[6, 2.5]} />
+                    <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.85} />
+                  </mesh>
+                );
+              })}
+            </>
+          )}
+
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+            <circleGeometry args={[8, 48]} />
+            <meshStandardMaterial 
+              map={sandTexture}
+              color="#c9b896"
+              roughness={0.8}
+              metalness={0}
+            />
+          </mesh>
+        </>
       ) : (
         <>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
@@ -75,32 +175,18 @@ function TexturedFloor({ config }: { config: TemplateConfig }) {
         </mesh>
       ))}
 
-      {isOutdoor && (
-        <>
-          {[12, 25, 40].map((radius, i) => (
-            <mesh key={`path-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-              <ringGeometry args={[radius - 1.5, radius + 1.5, 48]} />
-              <meshStandardMaterial 
-                map={sandTexture}
-                color="#c9b896"
-                roughness={0.8}
-                metalness={0}
-              />
-            </mesh>
-          ))}
-        </>
+      {!isOutdoor && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+          <circleGeometry args={[5, 64]} />
+          <meshStandardMaterial 
+            color={config.colors.accent} 
+            metalness={0.7} 
+            roughness={0.15}
+            emissive={config.colors.accent}
+            emissiveIntensity={0.2}
+          />
+        </mesh>
       )}
-
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <circleGeometry args={[5, 64]} />
-        <meshStandardMaterial 
-          color={config.colors.accent} 
-          metalness={isOutdoor ? 0.1 : 0.7} 
-          roughness={isOutdoor ? 0.8 : 0.15}
-          emissive={config.colors.accent}
-          emissiveIntensity={0.2}
-        />
-      </mesh>
     </group>
   );
 }
@@ -1161,6 +1247,195 @@ function BirdBath({ position }: { position: [number, number, number] }) {
   );
 }
 
+function HedgeWall({ position, rotation = 0, length = 8, height = 2 }: { position: [number, number, number]; rotation?: number; length?: number; height?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[length, height, 1.2]} />
+        <meshStandardMaterial color="#1e5631" roughness={0.9} />
+      </mesh>
+      {Array.from({ length: Math.floor(length / 1.5) }).map((_, i) => {
+        const xPos = -length / 2 + 0.75 + i * 1.5;
+        return (
+          <mesh key={i} position={[xPos, height + 0.2, 0]} castShadow>
+            <sphereGeometry args={[0.5, 8, 8]} />
+            <meshStandardMaterial color="#228b22" roughness={0.85} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+function HedgeArchway({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[-1.5, 1.2, 0]} castShadow>
+        <boxGeometry args={[1, 2.4, 1]} />
+        <meshStandardMaterial color="#1e5631" roughness={0.9} />
+      </mesh>
+      <mesh position={[1.5, 1.2, 0]} castShadow>
+        <boxGeometry args={[1, 2.4, 1]} />
+        <meshStandardMaterial color="#1e5631" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 2.8, 0]} castShadow>
+        <boxGeometry args={[4, 0.8, 1]} />
+        <meshStandardMaterial color="#228b22" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 3.3, 0]} castShadow>
+        <sphereGeometry args={[0.6, 10, 10]} />
+        <meshStandardMaterial color="#2e8b2e" roughness={0.85} />
+      </mesh>
+    </group>
+  );
+}
+
+function Gazebo({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.1, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[3, 3.2, 0.2, 8]} />
+        <meshStandardMaterial color="#8b7355" roughness={0.8} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, i) => {
+        const angle = (i / 6) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(angle) * 2.5, 1.5, Math.sin(angle) * 2.5]} castShadow>
+            <cylinderGeometry args={[0.12, 0.15, 3, 8]} />
+            <meshStandardMaterial color="#f5f5f0" roughness={0.5} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 3.5, 0]} castShadow>
+        <coneGeometry args={[3.5, 2, 8]} />
+        <meshStandardMaterial color="#8b4513" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 4.6, 0]} castShadow>
+        <sphereGeometry args={[0.2, 8, 8]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+function GardenLampPost({ position }: { position: [number, number, number] }) {
+  const glowRef = useRef<THREE.Mesh>(null);
+  const lightRef = useRef<THREE.PointLight>(null);
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+    if (glowRef.current) {
+      const material = glowRef.current.material as THREE.MeshStandardMaterial;
+      material.emissiveIntensity = 0.8 + Math.sin(time * 2) * 0.2;
+    }
+    if (lightRef.current) {
+      lightRef.current.intensity = 1 + Math.sin(time * 2) * 0.3;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.12, 3, 8]} />
+        <meshStandardMaterial color="#2a2a2a" metalness={0.5} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 3.1, 0]} castShadow>
+        <boxGeometry args={[0.4, 0.1, 0.4]} />
+        <meshStandardMaterial color="#3a3a3a" metalness={0.5} roughness={0.6} />
+      </mesh>
+      <mesh ref={glowRef} position={[0, 3.4, 0]}>
+        <boxGeometry args={[0.35, 0.5, 0.35]} />
+        <meshStandardMaterial color="#ffffee" emissive="#ffcc77" emissiveIntensity={0.8} transparent opacity={0.9} />
+      </mesh>
+      <mesh position={[0, 3.7, 0]} castShadow>
+        <coneGeometry args={[0.25, 0.15, 4]} />
+        <meshStandardMaterial color="#2a2a2a" metalness={0.5} roughness={0.6} />
+      </mesh>
+      <pointLight ref={lightRef} position={[0, 3.4, 0]} intensity={1} distance={15} color="#ffcc88" decay={2} />
+    </group>
+  );
+}
+
+function ScatteredTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  const leavesRef = useRef<THREE.Group>(null);
+  const offset = useMemo(() => Math.random() * 100, []);
+
+  useFrame((state) => {
+    if (leavesRef.current) {
+      leavesRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.2 + offset) * 0.02;
+      leavesRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.3 + offset) * 0.01;
+    }
+  });
+
+  return (
+    <group position={position} scale={[scale, scale, scale]}>
+      <mesh position={[0, 2, 0]} castShadow>
+        <cylinderGeometry args={[0.2, 0.35, 4, 8]} />
+        <meshStandardMaterial color="#5d4037" roughness={0.95} />
+      </mesh>
+      <group ref={leavesRef}>
+        <mesh position={[0, 4.5, 0]} castShadow>
+          <sphereGeometry args={[2, 12, 12]} />
+          <meshStandardMaterial color="#2d6a35" roughness={0.85} />
+        </mesh>
+        <mesh position={[0.8, 5, 0.5]} castShadow>
+          <sphereGeometry args={[1.2, 10, 10]} />
+          <meshStandardMaterial color="#38803f" roughness={0.85} />
+        </mesh>
+        <mesh position={[-0.6, 5.2, -0.4]} castShadow>
+          <sphereGeometry args={[1, 8, 8]} />
+          <meshStandardMaterial color="#3d8b45" roughness={0.85} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function WildBush({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={[scale, scale, scale]}>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <sphereGeometry args={[0.8, 10, 10]} />
+        <meshStandardMaterial color="#2e7d32" roughness={0.9} />
+      </mesh>
+      <mesh position={[0.4, 0.7, 0.3]} castShadow>
+        <sphereGeometry args={[0.5, 8, 8]} />
+        <meshStandardMaterial color="#388e3c" roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.3, 0.6, -0.2]} castShadow>
+        <sphereGeometry args={[0.4, 8, 8]} />
+        <meshStandardMaterial color="#43a047" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
+function GardenStoneCircle({ position }: { position: [number, number, number] }) {
+  const stones = useMemo(() => {
+    return Array.from({ length: 8 }).map((_, i) => {
+      const angle = (i / 8) * Math.PI * 2;
+      const radius = 2.5;
+      return {
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius,
+        scale: 0.8 + (i % 3) * 0.15,
+        rotation: angle + (i * 0.3)
+      };
+    });
+  }, []);
+
+  return (
+    <group position={position}>
+      {stones.map((s, i) => (
+        <mesh key={i} position={[s.x, 0.4, s.z]} rotation={[0, s.rotation, 0]} castShadow receiveShadow>
+          <boxGeometry args={[0.6 * s.scale, 0.8 * s.scale, 0.4 * s.scale]} />
+          <meshStandardMaterial color="#888888" roughness={0.8} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 function GardenButterflies({ position }: { position: [number, number, number] }) {
   const butterfliesRef = useRef<THREE.Group>(null);
   
@@ -1506,9 +1781,9 @@ function GardenTree({ position }: { position: [number, number, number] }) {
 }
 
 
-function RoomChamber({ room, index, config }: { room: Room; index: number; config: TemplateConfig }) {
+function RoomChamber({ room, index, config, layoutAlgorithm }: { room: Room; index: number; config: TemplateConfig; layoutAlgorithm: LayoutAlgorithm }) {
   const [x, , z] = room.position;
-  const roomRadius = 7;
+  const roomRadius = 10;
   const wallHeight = 6;
   const sandTexture = useTexture("/textures/sand.jpg");
   const woodTexture = useTexture("/textures/wood.jpg");
@@ -1532,22 +1807,80 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
     return sandTexture;
   };
 
+  const scatteredTrees = useMemo(() => {
+    if (!isGarden) return [];
+    const trees: { x: number; z: number; scale: number }[] = [];
+    const seed = index * 1000;
+    const seededRandom = (s: number) => {
+      const x = Math.sin(s) * 10000;
+      return x - Math.floor(x);
+    };
+    for (let i = 0; i < 12; i++) {
+      const angle = seededRandom(seed + i * 10) * Math.PI * 2;
+      const radius = 2 + seededRandom(seed + i * 10 + 1) * (roomRadius - 3);
+      trees.push({
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius,
+        scale: 0.7 + seededRandom(seed + i * 10 + 2) * 0.6
+      });
+    }
+    return trees;
+  }, [isGarden, index, roomRadius]);
+
+  const scatteredBushes = useMemo(() => {
+    if (!isGarden) return [];
+    const bushes: { x: number; z: number; scale: number }[] = [];
+    const seed = index * 2000;
+    const seededRandom = (s: number) => {
+      const x = Math.sin(s) * 10000;
+      return x - Math.floor(x);
+    };
+    for (let i = 0; i < 8; i++) {
+      const angle = seededRandom(seed + i * 15) * Math.PI * 2;
+      const radius = 3 + seededRandom(seed + i * 15 + 1) * (roomRadius - 4);
+      bushes.push({
+        x: Math.cos(angle) * radius,
+        z: Math.sin(angle) * radius,
+        scale: 0.8 + seededRandom(seed + i * 15 + 2) * 0.5
+      });
+    }
+    return bushes;
+  }, [isGarden, index, roomRadius]);
+
+  const hedgeConfig = useMemo(() => {
+    if (!isGarden) return null;
+    switch (layoutAlgorithm) {
+      case "circular":
+        return { type: "arc" as const, segments: 4 };
+      case "linear":
+        return { type: "parallel" as const };
+      case "grid":
+        return { type: "square" as const };
+      case "spiral":
+        return { type: "curved" as const };
+      default:
+        return { type: "arc" as const, segments: 3 };
+    }
+  }, [isGarden, layoutAlgorithm]);
+
   return (
     <group position={[x, 0, z]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
-        <circleGeometry args={[roomRadius, 48]} />
-        <meshStandardMaterial 
-          map={getFloorTexture()}
-          color={config.colors.floor} 
-          metalness={isLibrary ? 0.1 : 0.08} 
-          roughness={isGarden ? 0.9 : 0.45}
-        />
-      </mesh>
+      {!isGarden && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+          <circleGeometry args={[roomRadius - 3, 48]} />
+          <meshStandardMaterial 
+            map={getFloorTexture()}
+            color={config.colors.floor} 
+            metalness={isLibrary ? 0.1 : 0.08} 
+            roughness={0.45}
+          />
+        </mesh>
+      )}
 
       {!isGarden && (
         <>
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, 0]}>
-            <ringGeometry args={[roomRadius * 0.55, roomRadius * 0.62, 48]} />
+            <ringGeometry args={[(roomRadius - 3) * 0.55, (roomRadius - 3) * 0.62, 48]} />
             <meshStandardMaterial 
               color={config.colors.accent} 
               metalness={0.35} 
@@ -1558,7 +1891,7 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
           </mesh>
 
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-            <ringGeometry args={[roomRadius - 0.3, roomRadius, 48]} />
+            <ringGeometry args={[roomRadius - 3.3, roomRadius - 3, 48]} />
             <meshStandardMaterial 
               color={config.colors.accent} 
               metalness={0.3} 
@@ -1567,7 +1900,7 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
           </mesh>
 
           <mesh position={[0, wallHeight / 2, 0]}>
-            <cylinderGeometry args={[roomRadius, roomRadius, wallHeight, 48, 1, true]} />
+            <cylinderGeometry args={[roomRadius - 3, roomRadius - 3, wallHeight, 48, 1, true]} />
             <meshStandardMaterial 
               color={config.colors.walls} 
               side={THREE.BackSide} 
@@ -1580,25 +1913,84 @@ function RoomChamber({ room, index, config }: { room: Room; index: number; confi
 
       {isGarden && (
         <>
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-            <ringGeometry args={[roomRadius - 1, roomRadius, 48]} />
-            <meshStandardMaterial map={sandTexture} color="#c9b896" roughness={0.8} />
-          </mesh>
-          {Array.from({ length: 6 }).map((_, i) => {
+          {scatteredTrees.map((tree, i) => (
+            <ScatteredTree key={`stree-${index}-${i}`} position={[tree.x, 0, tree.z]} scale={tree.scale} />
+          ))}
+          
+          {scatteredBushes.map((bush, i) => (
+            <WildBush key={`bush-${index}-${i}`} position={[bush.x, 0, bush.z]} scale={bush.scale} />
+          ))}
+
+          {hedgeConfig?.type === "arc" && Array.from({ length: hedgeConfig.segments }).map((_, i) => {
+            const angle = ((i + 0.5) / hedgeConfig.segments) * Math.PI * 2;
+            const radius = roomRadius - 1;
+            return (
+              <HedgeWall 
+                key={`hedge-${index}-${i}`} 
+                position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]} 
+                rotation={angle + Math.PI / 2}
+                length={6}
+                height={2.5}
+              />
+            );
+          })}
+
+          {hedgeConfig?.type === "parallel" && (
+            <>
+              <HedgeWall position={[0, 0, roomRadius - 1]} rotation={0} length={roomRadius * 1.5} height={2} />
+              <HedgeWall position={[0, 0, -(roomRadius - 1)]} rotation={0} length={roomRadius * 1.5} height={2} />
+            </>
+          )}
+
+          {hedgeConfig?.type === "square" && (
+            <>
+              <HedgeWall position={[roomRadius - 1, 0, 0]} rotation={Math.PI / 2} length={roomRadius * 1.2} height={2} />
+              <HedgeWall position={[-(roomRadius - 1), 0, 0]} rotation={Math.PI / 2} length={roomRadius * 1.2} height={2} />
+              <HedgeWall position={[0, 0, roomRadius - 1]} rotation={0} length={roomRadius * 1.2} height={2} />
+              <HedgeWall position={[0, 0, -(roomRadius - 1)]} rotation={0} length={roomRadius * 1.2} height={2} />
+            </>
+          )}
+
+          {hedgeConfig?.type === "curved" && Array.from({ length: 6 }).map((_, i) => {
             const angle = (i / 6) * Math.PI * 2;
-            return <GardenTree key={`tree-${index}-${i}`} position={[Math.cos(angle) * (roomRadius - 0.5), 0, Math.sin(angle) * (roomRadius - 0.5)]} />;
+            const radius = roomRadius - 2;
+            return (
+              <HedgeWall 
+                key={`hedge-${index}-${i}`} 
+                position={[Math.cos(angle) * radius, 0, Math.sin(angle) * radius]} 
+                rotation={angle + Math.PI / 4}
+                length={4}
+                height={1.8}
+              />
+            );
           })}
-          {Array.from({ length: 4 }).map((_, i) => {
-            const angle = ((i + 0.5) / 4) * Math.PI * 2;
-            return <FlowerBed key={`flower-${index}-${i}`} position={[Math.cos(angle) * 4, 0, Math.sin(angle) * 4]} rotation={angle} />;
+
+          <HedgeArchway 
+            position={[Math.cos(Math.atan2(-z, -x)) * (roomRadius - 1), 0, Math.sin(Math.atan2(-z, -x)) * (roomRadius - 1)]} 
+            rotation={Math.atan2(-z, -x)}
+          />
+
+          {Array.from({ length: 6 }).map((_, i) => {
+            const angle = ((i + 0.3) / 6) * Math.PI * 2;
+            const colors = ["#ff69b4", "#ff6347", "#ffd700", "#da70d6", "#87ceeb", "#ffa500"];
+            return <FlowerBed key={`flower-${index}-${i}`} position={[Math.cos(angle) * 5, 0, Math.sin(angle) * 5]} rotation={angle} flowerColor={colors[i]} />;
           })}
+
           {[0, Math.PI].map((angle, i) => (
-            <GardenBench key={`bench-${index}-${i}`} position={[Math.cos(angle) * 3, 0, Math.sin(angle) * 3]} rotation={angle + Math.PI / 2} />
+            <GardenBench key={`bench-${index}-${i}`} position={[Math.cos(angle) * 3.5, 0, Math.sin(angle) * 3.5]} rotation={angle + Math.PI / 2} />
           ))}
-          {[Math.PI / 4, Math.PI * 3 / 4, Math.PI * 5 / 4, Math.PI * 7 / 4].map((angle, i) => (
-            <Topiary key={`topiary-${index}-${i}`} position={[Math.cos(angle) * 5.5, 0, Math.sin(angle) * 5.5]} shape={["sphere", "cone", "spiral"][i % 3] as "sphere" | "cone" | "spiral"} />
+
+          {[Math.PI / 3, Math.PI * 2 / 3, Math.PI, Math.PI * 4 / 3, Math.PI * 5 / 3, 0].map((angle, i) => (
+            <Topiary key={`topiary-${index}-${i}`} position={[Math.cos(angle) * 7, 0, Math.sin(angle) * 7]} shape={["sphere", "cone", "spiral"][i % 3] as "sphere" | "cone" | "spiral"} />
           ))}
-          <BirdBath position={[2.5, 0, 2.5]} />
+
+          <GardenLampPost position={[4, 0, -4]} />
+          <GardenLampPost position={[-4, 0, 4]} />
+
+          {index % 3 === 0 && <BirdBath position={[3, 0, 3]} />}
+          {index % 3 === 1 && <GardenStoneCircle position={[0, 0, 0]} />}
+          {index % 3 === 2 && <Gazebo position={[0, 0, 0]} />}
+
           <GardenButterflies position={[0, 0, 0]} />
         </>
       )}
@@ -1877,12 +2269,146 @@ function FloatingParticles() {
   );
 }
 
+function GardenScatteredTrees({ rooms }: { rooms: Room[] }) {
+  const globalTrees = useMemo(() => {
+    const trees: { x: number; z: number; scale: number }[] = [];
+    const seededRandom = (s: number) => {
+      const x = Math.sin(s) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    for (let i = 0; i < 50; i++) {
+      const angle = seededRandom(i * 17) * Math.PI * 2;
+      const radius = 15 + seededRandom(i * 17 + 1) * 70;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      
+      let tooCloseToRoom = false;
+      for (const room of rooms) {
+        const dx = x - room.position[0];
+        const dz = z - room.position[2];
+        if (Math.sqrt(dx * dx + dz * dz) < 12) {
+          tooCloseToRoom = true;
+          break;
+        }
+      }
+      
+      if (!tooCloseToRoom) {
+        trees.push({
+          x,
+          z,
+          scale: 0.8 + seededRandom(i * 17 + 2) * 0.8
+        });
+      }
+    }
+    return trees;
+  }, [rooms]);
+
+  return (
+    <>
+      {globalTrees.map((tree, i) => (
+        <ScatteredTree key={`global-tree-${i}`} position={[tree.x, 0, tree.z]} scale={tree.scale} />
+      ))}
+    </>
+  );
+}
+
+function GardenGlobalBushes({ rooms }: { rooms: Room[] }) {
+  const bushes = useMemo(() => {
+    const result: { x: number; z: number; scale: number }[] = [];
+    const seededRandom = (s: number) => {
+      const x = Math.sin(s) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    for (let i = 0; i < 40; i++) {
+      const angle = seededRandom(i * 23 + 100) * Math.PI * 2;
+      const radius = 10 + seededRandom(i * 23 + 101) * 80;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      
+      let tooClose = false;
+      for (const room of rooms) {
+        const dx = x - room.position[0];
+        const dz = z - room.position[2];
+        if (Math.sqrt(dx * dx + dz * dz) < 8) {
+          tooClose = true;
+          break;
+        }
+      }
+      
+      if (!tooClose) {
+        result.push({
+          x,
+          z,
+          scale: 0.7 + seededRandom(i * 23 + 102) * 0.6
+        });
+      }
+    }
+    return result;
+  }, [rooms]);
+
+  return (
+    <>
+      {bushes.map((bush, i) => (
+        <WildBush key={`global-bush-${i}`} position={[bush.x, 0, bush.z]} scale={bush.scale} />
+      ))}
+    </>
+  );
+}
+
+function GardenPathLamps({ rooms, layoutAlgorithm }: { rooms: Room[]; layoutAlgorithm: LayoutAlgorithm }) {
+  const lamps = useMemo(() => {
+    const result: { x: number; z: number }[] = [];
+    
+    if (layoutAlgorithm === "circular") {
+      [15, 30, 45].forEach(radius => {
+        for (let i = 0; i < 6; i++) {
+          const angle = (i / 6) * Math.PI * 2;
+          result.push({ x: Math.cos(angle) * radius, z: Math.sin(angle) * radius });
+        }
+      });
+    } else if (layoutAlgorithm === "linear") {
+      for (let i = -4; i <= 4; i++) {
+        result.push({ x: i * 15, z: 3 });
+        result.push({ x: i * 15, z: -3 });
+      }
+    } else if (layoutAlgorithm === "grid") {
+      for (let i = -2; i <= 2; i++) {
+        for (let j = -2; j <= 2; j++) {
+          if (Math.abs(i) + Math.abs(j) > 0) {
+            result.push({ x: i * 18, z: j * 18 });
+          }
+        }
+      }
+    } else if (layoutAlgorithm === "spiral") {
+      for (let i = 0; i < 20; i++) {
+        const angle = (i / 20) * Math.PI * 2 * 4;
+        const radius = 8 + (i / 20) * 55;
+        result.push({ x: Math.cos(angle) * radius, z: Math.sin(angle) * radius });
+      }
+    }
+    
+    return result.slice(0, 24);
+  }, [layoutAlgorithm, rooms]);
+
+  return (
+    <>
+      {lamps.map((lamp, i) => (
+        <GardenLampPost key={`path-lamp-${i}`} position={[lamp.x, 0, lamp.z]} />
+      ))}
+    </>
+  );
+}
+
 export default function PalaceEnvironment() {
   const rooms = useMemoryPalace((state) => state.rooms);
   const nodes = useMemoryPalace((state) => state.nodes);
   const selectedTemplate = useMemoryPalace((state) => state.selectedTemplate);
+  const layoutAlgorithm = useMemoryPalace((state) => state.layoutAlgorithm);
   
   const config = PALACE_TEMPLATES[selectedTemplate];
+  const isGarden = config.id === "garden";
 
   const pedestals = useMemo(() => {
     return nodes.map((node) => ({
@@ -1896,14 +2422,21 @@ export default function PalaceEnvironment() {
       <AtmosphericEffects />
       <FloatingParticles />
       
-      <TexturedFloor config={config} />
-      <GrandRotunda config={config} />
+      <TexturedFloor config={config} layoutAlgorithm={layoutAlgorithm} />
+      
+      {!isGarden && <GrandRotunda config={config} />}
+      
+      {isGarden && <MagicalFountain />}
+      
+      {isGarden && <GardenScatteredTrees rooms={rooms} />}
+      {isGarden && <GardenGlobalBushes rooms={rooms} />}
+      {isGarden && <GardenPathLamps rooms={rooms} layoutAlgorithm={layoutAlgorithm} />}
 
       {rooms.map((room, index) => (
-        <RoomChamber key={room.id} room={room} index={index} config={config} />
+        <RoomChamber key={room.id} room={room} index={index} config={config} layoutAlgorithm={layoutAlgorithm} />
       ))}
 
-      {rooms.map((room) => (
+      {!isGarden && rooms.map((room) => (
         <StyledCorridor
           key={`corridor-${room.id}`}
           from={[0, 0, 0]}
@@ -1912,7 +2445,7 @@ export default function PalaceEnvironment() {
         />
       ))}
 
-      {rooms.map((room) => {
+      {!isGarden && rooms.map((room) => {
         const angleToCenter = Math.atan2(-room.position[2], -room.position[0]);
         return (
           <GrandArchway
@@ -1928,17 +2461,41 @@ export default function PalaceEnvironment() {
         );
       })}
 
+      {isGarden && rooms.map((room) => {
+        const angleToCenter = Math.atan2(-room.position[2], -room.position[0]);
+        return (
+          <HedgeArchway
+            key={`hedge-arch-${room.id}`}
+            position={[
+              room.position[0] + Math.cos(angleToCenter) * 9,
+              0,
+              room.position[2] + Math.sin(angleToCenter) * 9,
+            ]}
+            rotation={angleToCenter}
+          />
+        );
+      })}
+
       {pedestals.map((pedestal, i) => (
         <OrnatePedestal key={i} position={pedestal.position} config={config} />
       ))}
 
       <pointLight 
         position={[0, 12, 0]} 
-        intensity={2} 
-        distance={50} 
+        intensity={isGarden ? 3 : 2} 
+        distance={isGarden ? 100 : 50} 
         color={config.colors.ambient}
         decay={1.5}
       />
+      
+      {isGarden && (
+        <>
+          <pointLight position={[40, 15, 40]} intensity={1.5} distance={80} color="#ffffee" decay={2} />
+          <pointLight position={[-40, 15, -40]} intensity={1.5} distance={80} color="#ffffee" decay={2} />
+          <pointLight position={[40, 15, -40]} intensity={1.2} distance={80} color="#ffffcc" decay={2} />
+          <pointLight position={[-40, 15, 40]} intensity={1.2} distance={80} color="#ffffcc" decay={2} />
+        </>
+      )}
     </group>
   );
 }
