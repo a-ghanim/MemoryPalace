@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Patrick+Hand&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,6 +16,7 @@
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    font-family: 'Patrick Hand', cursive;
   }
 }
 
@@ -27,4 +30,157 @@ canvas {
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+}
+
+@layer components {
+  .paper-bg {
+    background-color: #fefcf3;
+    background-image: 
+      linear-gradient(90deg, transparent 79px, #f0e6d2 79px, #f0e6d2 81px, transparent 81px),
+      linear-gradient(#eee .1em, transparent .1em);
+    background-size: 100% 1.5em;
+  }
+
+  .paper-card {
+    background-color: #fefcf3;
+    border: 2px solid #2d2d2d;
+    border-radius: 3px;
+    box-shadow: 
+      4px 4px 0 #2d2d2d,
+      inset 0 0 40px rgba(0,0,0,0.02);
+    position: relative;
+  }
+
+  .paper-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border: 2px solid transparent;
+    border-radius: 5px;
+    background: 
+      linear-gradient(45deg, transparent 48%, #2d2d2d 49%, #2d2d2d 51%, transparent 52%) -2px -2px / 8px 8px repeat;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+
+  .paper-btn {
+    background-color: #fefcf3;
+    border: 2px solid #2d2d2d;
+    border-radius: 2px;
+    box-shadow: 3px 3px 0 #2d2d2d;
+    color: #2d2d2d;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.1rem;
+    padding: 0.5rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+
+  .paper-btn:hover {
+    transform: translate(1px, 1px);
+    box-shadow: 2px 2px 0 #2d2d2d;
+  }
+
+  .paper-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0px 0px 0 #2d2d2d;
+  }
+
+  .paper-btn-primary {
+    background-color: #2d2d2d;
+    color: #fefcf3;
+  }
+
+  .paper-btn-primary:hover {
+    background-color: #3d3d3d;
+  }
+
+  .paper-btn-danger {
+    background-color: #fefcf3;
+    border-color: #c44;
+    color: #c44;
+    box-shadow: 3px 3px 0 #c44;
+  }
+
+  .paper-btn-danger:hover {
+    box-shadow: 2px 2px 0 #c44;
+  }
+
+  .paper-input {
+    background-color: #fefcf3;
+    border: 2px solid #2d2d2d;
+    border-radius: 2px;
+    padding: 0.75rem 1rem;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1.1rem;
+    color: #2d2d2d;
+    width: 100%;
+  }
+
+  .paper-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #888;
+  }
+
+  .paper-input::placeholder {
+    color: #999;
+  }
+
+  .paper-title {
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    color: #2d2d2d;
+  }
+
+  .paper-text {
+    font-family: 'Patrick Hand', cursive;
+    color: #2d2d2d;
+  }
+
+  .paper-label {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 1rem;
+    color: #555;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  .paper-divider {
+    border: none;
+    border-top: 2px dashed #ccc;
+    margin: 1rem 0;
+  }
+
+  .paper-tag {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background-color: #fefcf3;
+    border: 1.5px solid #2d2d2d;
+    border-radius: 2px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 0.9rem;
+    color: #2d2d2d;
+  }
+
+  .sketchy-border {
+    border: 2px solid #2d2d2d;
+    border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+  }
+
+  .hand-drawn-box {
+    position: relative;
+    background: #fefcf3;
+  }
+
+  .hand-drawn-box::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border: 2px solid #2d2d2d;
+    border-radius: 95% 4% 92% 5%/4% 95% 6% 95%;
+    pointer-events: none;
+  }
 }
