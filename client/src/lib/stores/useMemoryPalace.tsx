@@ -120,6 +120,7 @@ export interface MemoryNode {
   category?: string;
   position: [number, number, number];
   roomIndex: number;
+  localIndex?: number;
   color: string;
   srs?: SpacedRepetitionData;
 }
@@ -436,23 +437,37 @@ type ProceduralLayoutFn = (
   rooms: Room[]
 ) => [number, number, number][];
 
+function getSequentialRoomAssignments(nodeCount: number, roomCount: number): { roomIndex: number; localIndex: number }[] {
+  const assignments: { roomIndex: number; localIndex: number }[] = [];
+  const baseNodesPerRoom = Math.floor(nodeCount / roomCount);
+  const extraNodes = nodeCount % roomCount;
+  
+  let nodeIdx = 0;
+  for (let roomIdx = 0; roomIdx < roomCount; roomIdx++) {
+    const nodesInThisRoom = baseNodesPerRoom + (roomIdx < extraNodes ? 1 : 0);
+    for (let localIdx = 0; localIdx < nodesInThisRoom; localIdx++) {
+      assignments.push({ roomIndex: roomIdx, localIndex: localIdx });
+      nodeIdx++;
+    }
+  }
+  
+  return assignments;
+}
+
 const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
   circular: (nodeCount, roomCount, rooms) => {
     const positions: [number, number, number][] = [];
-    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
-    for (let i = 0; i < nodeCount; i++) {
-      nodesPerRoom[i % roomCount]++;
-    }
-    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const assignments = getSequentialRoomAssignments(nodeCount, roomCount);
+    const roomCounts = new Map<number, number>();
+    assignments.forEach(a => roomCounts.set(a.roomIndex, (roomCounts.get(a.roomIndex) || 0) + 1));
     
     for (let i = 0; i < nodeCount; i++) {
-      const roomIndex = i % roomCount;
+      const { roomIndex, localIndex } = assignments[i];
       const room = rooms[roomIndex];
-      const localIndex = roomNodeIndex[roomIndex]++;
-      const totalInRoom = nodesPerRoom[roomIndex];
-      const angleStep = (Math.PI * 1.5) / Math.max(totalInRoom, 1);
-      const localAngle = -Math.PI * 0.75 + localIndex * angleStep;
-      const localRadius = 3 + Math.floor(localIndex / 4) * 1.5;
+      const totalInRoom = roomCounts.get(roomIndex) || 1;
+      const angleStep = (Math.PI * 1.2) / Math.max(totalInRoom - 1, 1);
+      const localAngle = -Math.PI * 0.6 + localIndex * angleStep;
+      const localRadius = 4;
       positions.push([
         room.position[0] + Math.cos(localAngle) * localRadius,
         1.5,
@@ -464,24 +479,20 @@ const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
   
   linear: (nodeCount, roomCount, rooms) => {
     const positions: [number, number, number][] = [];
-    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
-    for (let i = 0; i < nodeCount; i++) {
-      nodesPerRoom[i % roomCount]++;
-    }
-    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const assignments = getSequentialRoomAssignments(nodeCount, roomCount);
+    const roomCounts = new Map<number, number>();
+    assignments.forEach(a => roomCounts.set(a.roomIndex, (roomCounts.get(a.roomIndex) || 0) + 1));
     
     for (let i = 0; i < nodeCount; i++) {
-      const roomIndex = i % roomCount;
+      const { roomIndex, localIndex } = assignments[i];
       const room = rooms[roomIndex];
-      const localIndex = roomNodeIndex[roomIndex]++;
-      const totalInRoom = nodesPerRoom[roomIndex];
-      const startOffset = -((totalInRoom - 1) * 2) / 2;
-      const row = Math.floor(localIndex / 3);
-      const col = localIndex % 3;
+      const totalInRoom = roomCounts.get(roomIndex) || 1;
+      const spacing = 3;
+      const startOffset = -((totalInRoom - 1) * spacing) / 2;
       positions.push([
-        room.position[0] + startOffset + col * 2,
-        1.5 + row * 0.5,
-        room.position[2] + row * 2,
+        room.position[0] + startOffset + localIndex * spacing,
+        1.5,
+        room.position[2],
       ]);
     }
     return positions;
@@ -489,21 +500,16 @@ const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
   
   spiral: (nodeCount, roomCount, rooms) => {
     const positions: [number, number, number][] = [];
-    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
-    for (let i = 0; i < nodeCount; i++) {
-      nodesPerRoom[i % roomCount]++;
-    }
-    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const assignments = getSequentialRoomAssignments(nodeCount, roomCount);
     
     for (let i = 0; i < nodeCount; i++) {
-      const roomIndex = i % roomCount;
+      const { roomIndex, localIndex } = assignments[i];
       const room = rooms[roomIndex];
-      const localIndex = roomNodeIndex[roomIndex]++;
-      const spiralAngle = localIndex * 1.2;
-      const spiralRadius = 1.5 + localIndex * 0.6;
+      const spiralAngle = localIndex * 1.0;
+      const spiralRadius = 2 + localIndex * 0.8;
       positions.push([
         room.position[0] + Math.cos(spiralAngle) * spiralRadius,
-        1.5 + localIndex * 0.2,
+        1.5,
         room.position[2] + Math.sin(spiralAngle) * spiralRadius,
       ]);
     }
@@ -512,23 +518,18 @@ const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
   
   grid: (nodeCount, roomCount, rooms) => {
     const positions: [number, number, number][] = [];
-    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
-    for (let i = 0; i < nodeCount; i++) {
-      nodesPerRoom[i % roomCount]++;
-    }
-    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const assignments = getSequentialRoomAssignments(nodeCount, roomCount);
     
     for (let i = 0; i < nodeCount; i++) {
-      const roomIndex = i % roomCount;
+      const { roomIndex, localIndex } = assignments[i];
       const room = rooms[roomIndex];
-      const localIndex = roomNodeIndex[roomIndex]++;
       const gridSize = 3;
       const row = Math.floor(localIndex / gridSize);
       const col = localIndex % gridSize;
       positions.push([
-        room.position[0] + (col - 1) * 2.5,
+        room.position[0] + (col - 1) * 3,
         1.5,
-        room.position[2] + (row - 1) * 2.5,
+        room.position[2] + (row - 1) * 3,
       ]);
     }
     return positions;
@@ -536,11 +537,7 @@ const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
   
   random: (nodeCount, roomCount, rooms) => {
     const positions: [number, number, number][] = [];
-    const nodesPerRoom: number[] = new Array(roomCount).fill(0);
-    for (let i = 0; i < nodeCount; i++) {
-      nodesPerRoom[i % roomCount]++;
-    }
-    const roomNodeIndex: number[] = new Array(roomCount).fill(0);
+    const assignments = getSequentialRoomAssignments(nodeCount, roomCount);
     const seed = nodeCount * 1000 + roomCount;
     const seededRandom = (s: number) => {
       const x = Math.sin(s) * 10000;
@@ -548,14 +545,13 @@ const layoutAlgorithms: Record<LayoutAlgorithm, ProceduralLayoutFn> = {
     };
     
     for (let i = 0; i < nodeCount; i++) {
-      const roomIndex = i % roomCount;
+      const { roomIndex, localIndex } = assignments[i];
       const room = rooms[roomIndex];
-      const localIndex = roomNodeIndex[roomIndex]++;
       const randX = (seededRandom(seed + roomIndex * 100 + localIndex * 2) - 0.5) * 6;
       const randZ = (seededRandom(seed + roomIndex * 100 + localIndex * 2 + 1) - 0.5) * 6;
       positions.push([
         room.position[0] + randX,
-        1.5 + seededRandom(seed + roomIndex * 100 + localIndex * 3) * 0.5,
+        1.5,
         room.position[2] + randZ,
       ]);
     }
@@ -701,9 +697,10 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       }
 
       const positions = layoutAlgorithms[layoutAlgorithm](aiChunks.length, numRooms, rooms);
+      const assignments = getSequentialRoomAssignments(aiChunks.length, numRooms);
 
       aiChunks.forEach((chunk, index) => {
-        const roomIndex = index % numRooms;
+        const { roomIndex, localIndex } = assignments[index];
         const room = rooms[roomIndex];
         const position = positions[index] || [room.position[0], 1.5, room.position[2]];
 
@@ -718,7 +715,8 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
           category: chunk.category,
           position: position as [number, number, number],
           roomIndex,
-          color: template.colors.nodeColors[roomIndex % template.colors.nodeColors.length],
+          localIndex,
+          color: template.colors.nodeColors[localIndex % template.colors.nodeColors.length],
           srs: createInitialSRS(),
         });
 
