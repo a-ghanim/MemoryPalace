@@ -167,12 +167,39 @@ export default function ExplorerHUD() {
             </div>
           ) : (
             <>
+              <div className="mb-3">
+                <h4 className="text-sm font-semibold text-white mb-1">{selectedNode.title}</h4>
+                {selectedNode.category && (
+                  <span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-600/50 text-purple-200">
+                    {selectedNode.category}
+                  </span>
+                )}
+              </div>
+              
               <div
-                className="p-4 bg-slate-800/50 rounded-lg border-l-4"
+                className="p-4 bg-slate-800/50 rounded-lg border-l-4 max-h-32 overflow-y-auto"
                 style={{ borderColor: selectedNode.color }}
               >
-                <p className="text-slate-200 leading-relaxed">{selectedNode.content}</p>
+                <p className="text-slate-200 leading-relaxed text-sm">{selectedNode.content}</p>
               </div>
+              
+              {selectedNode.mnemonic && (
+                <div className="mt-3 p-3 bg-amber-900/30 rounded-lg border border-amber-600/30">
+                  <p className="text-xs text-amber-300 font-medium mb-1">Memory Trick</p>
+                  <p className="text-sm text-amber-100">{selectedNode.mnemonic}</p>
+                </div>
+              )}
+              
+              {selectedNode.keywords && selectedNode.keywords.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {selectedNode.keywords.map((keyword, i) => (
+                    <span key={i} className="px-2 py-0.5 text-xs bg-slate-700 text-slate-300 rounded">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
               <div className="mt-4 flex justify-between items-center">
                 <span className="text-xs text-slate-500">
                   Room: {rooms[selectedNode.roomIndex]?.name || "Unknown"}

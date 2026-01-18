@@ -17,10 +17,10 @@ export default function ContentInput() {
     fetchSavedPalaces();
   }, [fetchSavedPalaces]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputContent.trim()) {
-      generatePalace();
+    if (inputContent.trim() && !isLoading) {
+      await generatePalace();
     }
   };
 

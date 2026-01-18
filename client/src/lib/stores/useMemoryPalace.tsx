@@ -106,6 +106,9 @@ export interface MemoryNode {
   id: string;
   content: string;
   title: string;
+  mnemonic?: string;
+  keywords?: string[];
+  category?: string;
   position: [number, number, number];
   roomIndex: number;
   color: string;
@@ -147,7 +150,7 @@ interface MemoryPalaceState {
   setInputContent: (content: string) => void;
   setTemplate: (template: PalaceTemplate) => void;
   setPalaceName: (name: string) => void;
-  generatePalace: () => void;
+  generatePalace: () => Promise<void>;
   selectNode: (id: string | null) => void;
   updateNodeContent: (id: string, content: string) => void;
   reset: () => void;
@@ -370,16 +373,55 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
 
     getTemplateConfig: () => PALACE_TEMPLATES[get().selectedTemplate],
 
-    generatePalace: () => {
+    generatePalace: async () => {
       const { inputContent, selectedTemplate } = get();
       if (!inputContent.trim()) return;
 
+      set({ isLoading: true });
+
       const template = PALACE_TEMPLATES[selectedTemplate];
-      const chunks = splitContentIntoChunks(inputContent);
       
-      if (chunks.length === 0) return;
+      interface AIChunk {
+        content: string;
+        title: string;
+        mnemonic?: string;
+        keywords?: string[];
+        category?: string;
+      }
       
-      const numRooms = Math.max(1, Math.min(Math.ceil(chunks.length / 3), 4));
+      let aiChunks: AIChunk[] = [];
+      let suggestedRoomNames: string[] = [];
+      
+      try {
+        const response = await fetch("/api/parse-content", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: inputContent }),
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          aiChunks = data.chunks || [];
+          suggestedRoomNames = data.suggestedRoomNames || [];
+        }
+      } catch (error) {
+        console.log("AI parsing unavailable, using fallback");
+      }
+      
+      if (aiChunks.length === 0) {
+        const chunks = splitContentIntoChunks(inputContent);
+        aiChunks = chunks.map(chunk => ({
+          content: chunk,
+          title: chunk.substring(0, 40) + (chunk.length > 40 ? "..." : ""),
+        }));
+      }
+      
+      if (aiChunks.length === 0) {
+        set({ isLoading: false });
+        return;
+      }
+      
+      const numRooms = Math.max(1, Math.min(Math.ceil(aiChunks.length / 3), 4));
       
       const rooms: Room[] = [];
       const nodes: MemoryNode[] = [];
@@ -390,15 +432,17 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         const roomX = Math.cos(angle) * radius;
         const roomZ = Math.sin(angle) * radius;
 
+        const roomName = suggestedRoomNames[i] || template.roomNames[i % template.roomNames.length];
+        
         rooms.push({
           id: generateId(),
-          name: template.roomNames[i % template.roomNames.length],
+          name: roomName,
           position: [roomX, 0, roomZ],
           nodes: [],
         });
       }
 
-      chunks.forEach((chunk, index) => {
+      aiChunks.forEach((chunk, index) => {
         const roomIndex = index % numRooms;
         const room = rooms[roomIndex];
         const nodeIndexInRoom = Math.floor(index / numRooms);
@@ -409,12 +453,14 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         const nodeZ = room.position[2] + Math.sin(localAngle) * localRadius;
 
         const nodeId = generateId();
-        const title = chunk.substring(0, 30) + (chunk.length > 30 ? "..." : "");
 
         nodes.push({
           id: nodeId,
-          content: chunk,
-          title,
+          content: chunk.content,
+          title: chunk.title,
+          mnemonic: chunk.mnemonic,
+          keywords: chunk.keywords,
+          category: chunk.category,
           position: [nodeX, 1.5, nodeZ],
           roomIndex,
           color: template.colors.nodeColors[roomIndex % template.colors.nodeColors.length],
@@ -429,6 +475,7 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         phase: "exploring",
         selectedNodeId: null,
         currentPalaceId: null,
+        isLoading: false,
       });
     },
 

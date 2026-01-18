@@ -2,11 +2,30 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertMemoryPalaceSchema } from "@shared/schema";
+import { parseContentWithClaude } from "./claudeParsing";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  app.post("/api/parse-content", async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "Content is required" });
+      }
+
+      const parsed = await parseContentWithClaude(content);
+      res.json(parsed);
+    } catch (error: any) {
+      console.error("Error parsing content:", error);
+      if (error.message === "ANTHROPIC_API_KEY not configured") {
+        return res.status(503).json({ error: "AI service not configured", fallback: true });
+      }
+      res.status(500).json({ error: "Failed to parse content", fallback: true });
+    }
+  });
+
   app.get("/api/palaces", async (req, res) => {
     try {
       const palaces = await storage.getAllPalaces();
