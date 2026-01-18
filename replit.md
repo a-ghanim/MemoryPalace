@@ -69,3 +69,6 @@ Run `npm run dev` to start the development server on port 5000.
   - Enhanced content parsing to handle headings, lists, definitions, facts
   - Added customizable palace templates: Mansion, Museum, Garden, Library
   - Each template has unique colors, room names, and central features
+  - Implemented full save/load persistence with PostgreSQL database
+  - Added API endpoints for CRUD operations on palaces
+  - Created save dialog in ExplorerHUD and saved palaces list in ContentInput
