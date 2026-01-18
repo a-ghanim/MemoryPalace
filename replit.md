@@ -152,5 +152,11 @@ Run `npm run dev` to start the development server on port 5000.
     - Diamond (octahedron): facts/statistics
     - Pyramid (cone): definitions/concepts
     - Star (dodecahedron): headings/titles
+  - Fixed true memory palace navigation and design
+    - Navigation now flows sequentially through all nodes in room 1, then room 2, etc.
+    - Memory nodes redesigned as 8 distinct physical landmarks:
+      - Pedestal, Treasure Chest, Statue, Bookstand, Throne, Vase, Mirror, Globe
+    - Each landmark provides a unique visual anchor for memory association
+    - Landmarks cycle based on position within each room for variety
     - Crystal (cylinder): quotes/examples
   - Moved Sign In button to fixed top-right corner of page
