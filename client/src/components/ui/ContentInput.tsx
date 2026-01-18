@@ -175,7 +175,14 @@ Recursion is when a function calls itself, useful for problems that can be broke
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center overflow-auto py-8" style={{ backgroundColor: '#f5f0e1' }}>
+    <div 
+      className="fixed inset-0 flex items-center justify-center overflow-auto py-16 px-8" 
+      style={{ 
+        backgroundColor: '#f5f0e1',
+        backgroundImage: 'radial-gradient(circle, #ccc 1px, transparent 1px)',
+        backgroundSize: '20px 20px'
+      }}
+    >
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
       
       <div className="fixed top-4 right-4 z-50">
