@@ -60,28 +60,173 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
+interface ParsedChunk {
+  content: string;
+  type: "paragraph" | "list-item" | "heading" | "sentence" | "definition" | "fact";
+  keywords: string[];
+}
+
+function extractKeywords(text: string): string[] {
+  const words = text.toLowerCase().split(/\s+/);
+  const stopWords = new Set([
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would", "could",
+    "should", "may", "might", "must", "shall", "can", "need", "dare",
+    "and", "or", "but", "if", "then", "else", "when", "where", "why",
+    "how", "all", "each", "every", "both", "few", "more", "most", "other",
+    "some", "such", "no", "nor", "not", "only", "own", "same", "so",
+    "than", "too", "very", "just", "also", "now", "of", "to", "in", "for",
+    "on", "with", "at", "by", "from", "as", "into", "through", "during",
+    "before", "after", "above", "below", "between", "under", "again",
+    "further", "once", "here", "there", "this", "that", "these", "those",
+    "it", "its", "they", "them", "their", "what", "which", "who", "whom"
+  ]);
+  
+  return words
+    .filter(w => w.length > 3 && !stopWords.has(w))
+    .filter(w => /^[a-z]+$/.test(w))
+    .slice(0, 5);
+}
+
+function detectChunkType(text: string): ParsedChunk["type"] {
+  const trimmed = text.trim();
+  
+  if (/^#+\s/.test(trimmed) || /^[A-Z][^.!?]*:$/.test(trimmed)) {
+    return "heading";
+  }
+  
+  if (/^[-•*]\s/.test(trimmed) || /^\d+[.)]\s/.test(trimmed)) {
+    return "list-item";
+  }
+  
+  if (/^[A-Z][a-z]+\s*[:–-]\s/.test(trimmed) || /\s(is|are|means|refers to)\s/i.test(trimmed)) {
+    return "definition";
+  }
+  
+  if (/\d+/.test(trimmed) && /(percent|%|million|billion|thousand|year|century)/i.test(trimmed)) {
+    return "fact";
+  }
+  
+  if (trimmed.split(/[.!?]+/).filter(s => s.trim()).length <= 2) {
+    return "sentence";
+  }
+  
+  return "paragraph";
+}
+
 function splitContentIntoChunks(content: string): string[] {
-  const paragraphs = content.split(/\n\n+/).filter(p => p.trim());
+  const chunks: ParsedChunk[] = [];
+  const lines = content.split(/\n/);
+  let currentParagraph = "";
   
-  if (paragraphs.length >= 3) {
-    return paragraphs.slice(0, 12);
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    if (!trimmedLine) {
+      if (currentParagraph.trim()) {
+        chunks.push({
+          content: currentParagraph.trim(),
+          type: detectChunkType(currentParagraph),
+          keywords: extractKeywords(currentParagraph),
+        });
+        currentParagraph = "";
+      }
+      continue;
+    }
+    
+    if (/^[-•*]\s/.test(trimmedLine) || /^\d+[.)]\s/.test(trimmedLine)) {
+      if (currentParagraph.trim()) {
+        chunks.push({
+          content: currentParagraph.trim(),
+          type: detectChunkType(currentParagraph),
+          keywords: extractKeywords(currentParagraph),
+        });
+        currentParagraph = "";
+      }
+      chunks.push({
+        content: trimmedLine.replace(/^[-•*]\s*/, "").replace(/^\d+[.)]\s*/, ""),
+        type: "list-item",
+        keywords: extractKeywords(trimmedLine),
+      });
+      continue;
+    }
+    
+    if (/^#+\s/.test(trimmedLine)) {
+      if (currentParagraph.trim()) {
+        chunks.push({
+          content: currentParagraph.trim(),
+          type: detectChunkType(currentParagraph),
+          keywords: extractKeywords(currentParagraph),
+        });
+        currentParagraph = "";
+      }
+      chunks.push({
+        content: trimmedLine.replace(/^#+\s*/, ""),
+        type: "heading",
+        keywords: extractKeywords(trimmedLine),
+      });
+      continue;
+    }
+    
+    currentParagraph += (currentParagraph ? " " : "") + trimmedLine;
   }
   
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 10);
-  
-  if (sentences.length >= 3) {
-    return sentences.slice(0, 12).map(s => s.trim() + ".");
+  if (currentParagraph.trim()) {
+    chunks.push({
+      content: currentParagraph.trim(),
+      type: detectChunkType(currentParagraph),
+      keywords: extractKeywords(currentParagraph),
+    });
   }
   
-  const words = content.split(/\s+/);
-  const chunks: string[] = [];
-  const chunkSize = Math.ceil(words.length / 6);
-  
-  for (let i = 0; i < words.length; i += chunkSize) {
-    chunks.push(words.slice(i, i + chunkSize).join(" "));
+  if (chunks.length >= 3 && chunks.length <= 16) {
+    return chunks.map(c => c.content).slice(0, 16);
   }
   
-  return chunks.slice(0, 12);
+  if (chunks.length < 3) {
+    const allText = chunks.map(c => c.content).join(" ");
+    const sentences = allText.match(/[^.!?]+[.!?]+/g) || [];
+    
+    if (sentences.length >= 3) {
+      return sentences.map(s => s.trim()).filter(s => s.length > 15).slice(0, 16);
+    }
+    
+    const words = allText.split(/\s+/);
+    const targetChunks = Math.min(6, Math.max(3, Math.ceil(words.length / 20)));
+    const chunkSize = Math.ceil(words.length / targetChunks);
+    const result: string[] = [];
+    
+    for (let i = 0; i < words.length; i += chunkSize) {
+      result.push(words.slice(i, i + chunkSize).join(" "));
+    }
+    
+    return result;
+  }
+  
+  const mergedChunks: string[] = [];
+  let currentMerge = "";
+  
+  for (const chunk of chunks) {
+    if (chunk.type === "heading") {
+      if (currentMerge.trim()) {
+        mergedChunks.push(currentMerge.trim());
+      }
+      currentMerge = chunk.content;
+    } else if (chunk.content.length < 50 && currentMerge.length < 200) {
+      currentMerge += (currentMerge ? " " : "") + chunk.content;
+    } else {
+      if (currentMerge.trim()) {
+        mergedChunks.push(currentMerge.trim());
+      }
+      currentMerge = chunk.content;
+    }
+  }
+  
+  if (currentMerge.trim()) {
+    mergedChunks.push(currentMerge.trim());
+  }
+  
+  return mergedChunks.slice(0, 16);
 }
 
 export const useMemoryPalace = create<MemoryPalaceState>()(
