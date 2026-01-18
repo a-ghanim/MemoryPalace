@@ -135,3 +135,22 @@ Run `npm run dev` to start the development server on port 5000.
     - Inter for body text and UI elements
     - Poppins for titles and headings
     - Improved border radius and styling for modern look
+  - Enhanced visual distinction between palace styles
+    - Garden: outdoor environment with grass floors, trees, flower beds, no walls
+    - Library: wood floors with bookshelves filled with colored books
+    - Museum: stone/asphalt floors with illuminated display cases
+    - Mansion: marble/sand floors with elegant columns and torches
+  - Room layouts now follow selected pattern algorithm
+    - Circular: rooms arranged in a circle around center
+    - Linear: rooms in a straight line
+    - Spiral: rooms spiral outward from center
+    - Grid: rooms in a square grid pattern
+    - Random: pseudo-random room placement
+  - Memory nodes have category-based 3D shapes
+    - Sphere: default/paragraph content
+    - Cube: list items
+    - Diamond (octahedron): facts/statistics
+    - Pyramid (cone): definitions/concepts
+    - Star (dodecahedron): headings/titles
+    - Crystal (cylinder): quotes/examples
+  - Moved Sign In button to fixed top-right corner of page

@@ -651,12 +651,44 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
       
       const rooms: Room[] = [];
       const nodes: MemoryNode[] = [];
+      
+      const { layoutAlgorithm } = get();
+      const roomRadius = 18;
 
       for (let i = 0; i < numRooms; i++) {
-        const angle = (i / numRooms) * Math.PI * 2;
-        const radius = 15;
-        const roomX = Math.cos(angle) * radius;
-        const roomZ = Math.sin(angle) * radius;
+        let roomX = 0, roomZ = 0;
+        
+        switch (layoutAlgorithm) {
+          case "linear":
+            roomX = (i - (numRooms - 1) / 2) * roomRadius;
+            roomZ = 0;
+            break;
+          case "spiral":
+            const spiralAngle = (i / numRooms) * Math.PI * 1.5 - Math.PI / 4;
+            const spiralRadius = 12 + i * 6;
+            roomX = Math.cos(spiralAngle) * spiralRadius;
+            roomZ = Math.sin(spiralAngle) * spiralRadius;
+            break;
+          case "grid":
+            const cols = Math.ceil(Math.sqrt(numRooms));
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            roomX = (col - (cols - 1) / 2) * roomRadius;
+            roomZ = (row - (Math.ceil(numRooms / cols) - 1) / 2) * roomRadius;
+            break;
+          case "random":
+            const randAngle = ((i * 137.5) % 360) * (Math.PI / 180);
+            const randRadius = 12 + (i * 7) % 12;
+            roomX = Math.cos(randAngle) * randRadius;
+            roomZ = Math.sin(randAngle) * randRadius;
+            break;
+          case "circular":
+          default:
+            const angle = (i / numRooms) * Math.PI * 2;
+            roomX = Math.cos(angle) * roomRadius;
+            roomZ = Math.sin(angle) * roomRadius;
+            break;
+        }
 
         const roomName = suggestedRoomNames[i] || template.roomNames[i % template.roomNames.length];
         
@@ -668,7 +700,6 @@ export const useMemoryPalace = create<MemoryPalaceState>()(
         });
       }
 
-      const { layoutAlgorithm } = get();
       const positions = layoutAlgorithms[layoutAlgorithm](aiChunks.length, numRooms, rooms);
 
       aiChunks.forEach((chunk, index) => {

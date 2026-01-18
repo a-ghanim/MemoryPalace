@@ -8,6 +8,61 @@ interface MemoryNodeProps {
   index: number;
 }
 
+type ShapeType = "sphere" | "cube" | "diamond" | "pyramid" | "star" | "crystal";
+
+function getShapeForCategory(category?: string): ShapeType {
+  switch (category?.toLowerCase()) {
+    case "heading":
+    case "title":
+      return "star";
+    case "list-item":
+    case "list":
+      return "cube";
+    case "fact":
+    case "statistic":
+    case "number":
+      return "diamond";
+    case "definition":
+    case "concept":
+      return "pyramid";
+    case "quote":
+    case "example":
+      return "crystal";
+    default:
+      return "sphere";
+  }
+}
+
+function NodeShape({ shape }: { shape: ShapeType }) {
+  switch (shape) {
+    case "cube":
+      return (
+        <boxGeometry args={[0.5, 0.5, 0.5]} />
+      );
+    case "diamond":
+      return (
+        <octahedronGeometry args={[0.4, 0]} />
+      );
+    case "pyramid":
+      return (
+        <coneGeometry args={[0.35, 0.6, 4]} />
+      );
+    case "star":
+      return (
+        <dodecahedronGeometry args={[0.35, 0]} />
+      );
+    case "crystal":
+      return (
+        <cylinderGeometry args={[0.15, 0.35, 0.7, 6]} />
+      );
+    case "sphere":
+    default:
+      return (
+        <icosahedronGeometry args={[0.35, 1]} />
+      );
+  }
+}
+
 export default function MemoryNode({ node, index }: MemoryNodeProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const orbRef = useRef<THREE.Mesh>(null);
@@ -18,6 +73,7 @@ export default function MemoryNode({ node, index }: MemoryNodeProps) {
 
   const isSelected = selectedNodeId === node.id;
   const baseY = useMemo(() => 2.2, []);
+  const shape = useMemo(() => getShapeForCategory(node.category), [node.category]);
 
   useFrame((state) => {
     const time = state.clock.elapsedTime;
@@ -104,7 +160,7 @@ export default function MemoryNode({ node, index }: MemoryNodeProps) {
         onPointerOut={() => setHovered(false)}
         castShadow
       >
-        <icosahedronGeometry args={[0.35, 1]} />
+        <NodeShape shape={shape} />
         <meshStandardMaterial
           color={node.color}
           emissive={node.color}
