@@ -179,28 +179,44 @@ function splitContentIntoChunks(content: string): string[] {
     });
   }
   
-  if (chunks.length >= 3 && chunks.length <= 16) {
-    return chunks.map(c => c.content).slice(0, 16);
+  const validChunks = chunks.filter(c => c.content.trim().length > 0);
+  
+  if (validChunks.length === 0) {
+    return ["No content provided"];
   }
   
-  if (chunks.length < 3) {
-    const allText = chunks.map(c => c.content).join(" ");
-    const sentences = allText.match(/[^.!?]+[.!?]+/g) || [];
+  if (validChunks.length >= 1 && validChunks.length <= 16) {
+    const hasListItems = validChunks.some(c => c.type === "list-item");
+    const hasHeadings = validChunks.some(c => c.type === "heading");
     
-    if (sentences.length >= 3) {
-      return sentences.map(s => s.trim()).filter(s => s.length > 15).slice(0, 16);
+    if (hasListItems || hasHeadings || validChunks.length >= 2) {
+      return validChunks.map(c => c.content).slice(0, 16);
     }
     
-    const words = allText.split(/\s+/);
-    const targetChunks = Math.min(6, Math.max(3, Math.ceil(words.length / 20)));
-    const chunkSize = Math.ceil(words.length / targetChunks);
-    const result: string[] = [];
-    
-    for (let i = 0; i < words.length; i += chunkSize) {
-      result.push(words.slice(i, i + chunkSize).join(" "));
+    if (validChunks.length === 1) {
+      const singleText = validChunks[0].content;
+      const sentences = singleText.match(/[^.!?]+[.!?]+/g) || [];
+      
+      if (sentences.length >= 2) {
+        return sentences.map(s => s.trim()).filter(s => s.length > 10).slice(0, 16);
+      }
+      
+      const words = singleText.split(/\s+/).filter(w => w.length > 0);
+      if (words.length >= 6) {
+        const targetChunks = Math.min(4, Math.ceil(words.length / 15));
+        const chunkSize = Math.ceil(words.length / targetChunks);
+        const result: string[] = [];
+        
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunk = words.slice(i, i + chunkSize).join(" ");
+          if (chunk.trim()) result.push(chunk);
+        }
+        
+        return result.length > 0 ? result : [singleText];
+      }
+      
+      return [singleText];
     }
-    
-    return result;
   }
   
   const mergedChunks: string[] = [];
