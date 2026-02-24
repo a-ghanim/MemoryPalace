@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User, insertUserSchema } from "@shared/schema";
+import type { User } from "@shared/schema";
 import createMemoryStore from "memorystore";
 import { z } from "zod";
 
@@ -46,7 +46,7 @@ export function setupAuth(app: Express) {
   const MemoryStore = createMemoryStore(session);
 
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "memory-palace-secret-key-change-in-production",
+    secret: process.env.SESSION_SECRET || randomBytes(32).toString("hex"),
     resave: false,
     saveUninitialized: false,
     store: new MemoryStore({
