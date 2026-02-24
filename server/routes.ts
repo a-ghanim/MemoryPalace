@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
 import { insertMemoryPalaceSchema } from "@shared/schema";
 import { parseContentWithClaude } from "./claudeParsing";
@@ -40,7 +40,7 @@ export async function registerRoutes(
 
   app.get("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid palace ID" });
       }
@@ -75,7 +75,7 @@ export async function registerRoutes(
 
   app.put("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid palace ID" });
       }
@@ -103,7 +103,7 @@ export async function registerRoutes(
 
   app.delete("/api/palaces/:id", requireAuth, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
+      const id = parseInt(String(req.params.id));
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid palace ID" });
       }
@@ -116,7 +116,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const deleted = await storage.deletePalace(id);
+      await storage.deletePalace(id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting palace:", error);
