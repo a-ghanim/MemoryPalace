@@ -1,0 +1,2288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plush Octopus · WebGPU Soft-Body Studio</title>
+<style>
+  :root {
+    --sidebar-w: 340px;
+    --stage-bg: #e6e3ec;
+    --panel: rgba(252, 251, 255, 0.94);
+    --panel-border: rgba(48, 36, 96, 0.10);
+    --card: #ffffff;
+    --card-border: rgba(48, 36, 96, 0.09);
+    --text: #1d1a2c;
+    --muted: #6a6582;
+    --faint: #a29db6;
+    --accent: #7a64e4;
+    --accent-2: #ef8fb0;
+    --accent-soft: rgba(122, 100, 228, 0.13);
+    --track: #e5e1f2;
+    --good: #23a06b;
+    --warn: #cf8417;
+    --bad: #d2484f;
+    --shadow: 0 12px 40px rgba(40, 24, 90, 0.10);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --panel: rgba(22, 20, 32, 0.95);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --card: rgba(255, 255, 255, 0.04);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #ece9f6;
+      --muted: #a39dbb;
+      --faint: #6f6a86;
+      --accent: #a596ff;
+      --accent-soft: rgba(165, 150, 255, 0.16);
+      --track: rgba(255, 255, 255, 0.12);
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --panel: rgba(22, 20, 32, 0.95);
+    --panel-border: rgba(255, 255, 255, 0.08);
+    --card: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text: #ece9f6;
+    --muted: #a39dbb;
+    --faint: #6f6a86;
+    --accent: #a596ff;
+    --accent-soft: rgba(165, 150, 255, 0.16);
+    --track: rgba(255, 255, 255, 0.12);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: var(--stage-bg);
+    color: var(--text);
+    font: 13px/1.4 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--sidebar-w);
+    height: 100vh;
+    height: 100dvh;
+  }
+  #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  #gpu {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    display: block; touch-action: none; cursor: default; outline: none;
+  }
+  #gpu.can-grab { cursor: grab; }
+  #gpu.grabbing { cursor: grabbing; }
+  #gpu.orbiting { cursor: move; }
+  #overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #hint {
+    position: absolute; left: 16px; bottom: 16px; max-width: calc(100% - 32px);
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.72); color: #3d3854;
+    font-size: 12px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 18px rgba(40, 24, 90, 0.08); pointer-events: none;
+    transition: opacity .6s ease;
+  }
+  #hint b { color: #1d1a2c; font-weight: 600; }
+  #brand {
+    position: absolute; left: 16px; top: 14px; pointer-events: none;
+    color: rgba(40, 32, 70, 0.55); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+  }
+  #error {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: rgba(233, 230, 240, 0.96); z-index: 5;
+  }
+  #error[hidden] { display: none; }
+  #error .box {
+    max-width: 520px; background: #fff; color: #1d1a2c; border-radius: 14px; padding: 22px 24px;
+    box-shadow: var(--shadow); border: 1px solid rgba(48, 36, 96, 0.1);
+  }
+  #error h2 { margin: 0 0 8px; font-size: 17px; }
+  #error p { margin: 6px 0; color: #4d4866; }
+  #error pre {
+    white-space: pre-wrap; font: 11px/1.45 var(--mono); background: #f4f2fa; padding: 10px;
+    border-radius: 8px; max-height: 220px; overflow: auto; color: #5b2a3a;
+  }
+
+  /* ---------- sidebar ---------- */
+  #panel {
+    background: var(--panel);
+    border-left: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+    overflow-y: auto; overscroll-behavior: contain;
+    padding: 18px 18px 22px;
+    display: flex; flex-direction: column; gap: 14px;
+    z-index: 2;
+  }
+  .head { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 11px; flex: none;
+    background: radial-gradient(circle at 35% 30%, #c9bcff, #8a74ea 62%, #6c56d6);
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,.15), 0 4px 12px rgba(122,100,228,.35);
+    position: relative;
+  }
+  .logo::before, .logo::after {
+    content: ""; position: absolute; top: 15px; width: 6px; height: 6px; border-radius: 50%; background: #17131f;
+    box-shadow: 1px -1px 0 0 rgba(255,255,255,.0);
+  }
+  .logo::before { left: 11px; } .logo::after { right: 11px; }
+  .head h1 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+  .head p { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
+    padding: 12px 14px 13px;
+  }
+  .card h2 {
+    margin: 0 0 10px; font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--muted); display: flex; align-items: center; justify-content: space-between;
+  }
+  .card h2 .tag {
+    font: 600 10px/1 var(--mono); letter-spacing: 0; text-transform: none; color: var(--accent);
+    background: var(--accent-soft); padding: 4px 6px; border-radius: 6px;
+  }
+
+  .tele-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat {
+    border-radius: 10px; padding: 8px 10px; background: var(--accent-soft);
+    min-width: 0;
+  }
+  .stat .k { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat .v { font: 650 19px/1.15 var(--mono); letter-spacing: -0.02em; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .v small { font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .stat.wide { grid-column: span 2; }
+  #spark { width: 100%; height: 34px; display: block; margin-top: 6px; }
+  .rows { margin-top: 10px; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 11.5px; }
+  .rows dt { color: var(--muted); }
+  .rows dd { margin: 0; text-align: right; font: 500 11.5px/1.4 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .ctl { margin-top: 10px; }
+  .ctl:first-of-type { margin-top: 2px; }
+  .ctl .lab { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .ctl .lab span { font-weight: 550; }
+  .ctl .lab output { font: 500 11.5px var(--mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 20px; margin: 0; background: transparent; cursor: pointer;
+    --p: 50%;
+  }
+  input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--accent) 0 var(--p), var(--track) var(--p) 100%);
+  }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--accent); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; margin-top: -5px;
+    background: #fff; border: 2px solid var(--accent); box-shadow: 0 1px 4px rgba(40,24,90,.25);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; background: #fff; border: 2px solid var(--accent);
+    box-shadow: 0 1px 4px rgba(40,24,90,.25);
+  }
+  .toggle { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; cursor: pointer; user-select: none; }
+  .toggle span { font-weight: 550; }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .switch { width: 34px; height: 20px; border-radius: 20px; background: var(--track); position: relative; transition: background .2s; flex: none; }
+  .switch::after {
+    content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s;
+  }
+  .toggle input:checked + .switch { background: var(--accent); }
+  .toggle input:checked + .switch::after { transform: translateX(14px); }
+  .toggle input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  button {
+    font: 600 13px var(--sans); border: 0; border-radius: 11px; padding: 11px 14px; cursor: pointer;
+    transition: transform .08s ease, filter .15s ease, background .15s;
+  }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #reset { background: linear-gradient(180deg, #8b77ee, #6f58de); color: #fff; box-shadow: 0 6px 16px rgba(111, 88, 222, .35); }
+  #reset:hover { filter: brightness(1.06); }
+  #defaults { background: var(--accent-soft); color: var(--accent); }
+  .foot { color: var(--faint); font-size: 11px; text-align: center; margin-top: 2px; }
+
+  @media (max-width: 760px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+    #panel {
+      border-left: 0; border-top: 1px solid var(--panel-border);
+      max-height: 46vh; max-height: 46dvh; padding: 14px 16px 18px;
+    }
+    #hint { font-size: 11px; bottom: 10px; left: 10px; max-width: calc(100% - 20px); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <main id="stage">
+    <canvas id="gpu" tabindex="0" aria-label="Interactive plush octopus. Drag the toy to pull it, drag empty space to orbit, scroll to zoom."></canvas>
+    <svg id="overlay" aria-hidden="true">
+      <line id="grabLine" x1="0" y1="0" x2="0" y2="0" stroke="rgba(122,100,228,0.85)" stroke-width="2" stroke-dasharray="4 4" visibility="hidden" />
+      <circle id="grabDot" cx="0" cy="0" r="7" fill="rgba(255,255,255,0.85)" stroke="#7a64e4" stroke-width="2.5" visibility="hidden" />
+      <circle id="grabRoot" cx="0" cy="0" r="4" fill="#7a64e4" visibility="hidden" />
+    </svg>
+    <div id="brand">Plush Octopus · WebGPU</div>
+    <div id="hint"><b>Drag</b> the octopus to pull it · <b>Drag</b> empty space to orbit · <b>Scroll</b> to zoom · <b>Scroll while dragging</b> to push / pull</div>
+    <div id="error" hidden>
+      <div class="box">
+        <h2>WebGPU could not start</h2>
+        <p id="errorMsg">This demo needs a browser with WebGPU enabled (Chrome / Edge 113+, Safari 26+, or Firefox 141+ on Windows).</p>
+        <pre id="errorDetail" hidden></pre>
+      </div>
+    </div>
+  </main>
+
+  <aside id="panel" aria-label="Simulation controls">
+    <div class="head">
+      <div class="logo" aria-hidden="true"></div>
+      <div>
+        <h1>Plush Octopus</h1>
+        <p>Soft-body studio · WebGPU compute</p>
+      </div>
+    </div>
+
+    <section class="card" aria-label="Performance telemetry">
+      <h2>Telemetry <span class="tag" id="gpuTag">WebGPU</span></h2>
+      <div class="tele-grid">
+        <div class="stat"><div class="k">Current FPS</div><div class="v" id="tFps">–</div></div>
+        <div class="stat"><div class="k">Frame latency</div><div class="v" id="tLat">–<small>ms</small></div></div>
+        <div class="stat wide"><div class="k">Active WebGPU compute threads</div><div class="v" id="tThreads">–</div></div>
+      </div>
+      <canvas id="spark" aria-hidden="true"></canvas>
+      <dl class="rows">
+        <dt>Frame time (CPU)</dt><dd id="tFrame">–</dd>
+        <dt>GPU compute / render</dt><dd id="tGpu">–</dd>
+        <dt>Physics substeps</dt><dd id="tSub">–</dd>
+        <dt>Dispatches / frame</dt><dd id="tDisp">–</dd>
+        <dt>Particles · springs</dt><dd id="tPart">–</dd>
+        <dt>Mesh vertices · fur shells</dt><dd id="tMesh">–</dd>
+        <dt>Resolution · MSAA</dt><dd id="tRes">–</dd>
+        <dt>Adapter</dt><dd id="tAdapter">–</dd>
+      </dl>
+    </section>
+
+    <section class="card" aria-label="Physics parameters">
+      <h2>Physics Parameters</h2>
+      <div id="grp-physics"></div>
+      <label class="toggle"><span>Show physics lattice</span><input type="checkbox" id="lattice" /><span class="switch" aria-hidden="true"></span></label>
+    </section>
+
+    <section class="card" aria-label="Fur settings">
+      <h2>Fur Settings</h2>
+      <div id="grp-fur"></div>
+    </section>
+
+    <section class="card" aria-label="Environment">
+      <h2>Environment</h2>
+      <div id="grp-env"></div>
+    </section>
+
+    <div class="actions">
+      <button id="reset" type="button">Reset Simulation</button>
+      <button id="defaults" type="button" title="Restore default slider values">Defaults</button>
+    </div>
+    <div class="foot">Mass-spring + pressure soft body · symplectic Euler · all physics on the GPU</div>
+  </aside>
+</div>
+
+<script type="module">
+'use strict';
+
+/* =====================================================================
+   Plush Octopus — WebGPU soft-body toy
+   ---------------------------------------------------------------------
+   Physics  : volumetric mass-spring network (+ pressure for the head),
+              integrated on the GPU in compute shaders with ping-pong
+              state buffers, ~20 substeps / frame.
+   Skinning : render vertices are bound to particles with affine moving
+              least squares weights, evaluated in a compute pass that
+              also integrates a secondary "fur inertia" spring per vertex.
+   Fur      : instanced shell rendering; strands are procedural 3D
+              cellular noise with clumping, alpha-to-coverage on 4x MSAA.
+   ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+// ------------------------------------------------------------ constants
+const NT = 8;                 // tentacles
+const NS = 14;                // physics segments per tentacle
+const NR = 8;                 // ring particles per segment
+const SEGP = NR + 1;          // particles per segment (center + ring)
+const TENT_LEN = 2.6;
+const DS = TENT_LEN / (NS - 1);
+const ROOT_RHO = 0.22;
+const HEAD_C = [0, 1.30, 0];
+const HEAD_R = 1.0, HEAD_RY_TOP = 1.04, HEAD_RY_BOT = 0.84;
+const TABLE_HX = 8.6, TABLE_HZ = 7.6, TABLE_RC = 2.6, TABLE_PAD = 0.22;   // visual table slab
+const WALL_HX = 5.4, WALL_HZ = 4.5, WALL_RC = 1.2;                         // invisible play-area walls
+const DROP = 0.55;
+const SUB_DT = 1 / 1200;
+const EYE_AZ = 0.36, EYE_EL = -0.06, EYE_R = 0.13;
+const SM_SIZE = 2048, TOP_SIZE = 512;
+const TOP_Y = 6, TOP_NEAR = 0.1, TOP_FAR = 8;
+const LIGHT_DIR = norm3([-0.55, 1.0, 0.62]);
+const MSAA = 4;
+
+const KIND = { OUTER: 0, INNER: 1, CORE: 2, CENTER: 3, RING: 4 };
+const ST = { HEAD_SHELL: 0, HEAD_BEND: 1, HEAD_INT: 2, HEAD_RAD: 3, T_RING: 4, T_AXIAL: 5,
+             T_CORE: 6, T_SHEAR: 7, T_BEND: 8, ATTACH: 9, SKIRT: 10 };
+
+// ------------------------------------------------------------ small math
+function clamp(x, a, b) { return Math.min(b, Math.max(a, x)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function sub3(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+function mul3(a, s) { return [a[0] * s, a[1] * s, a[2] * s]; }
+function dot3(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+function cross3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+function len3(a) { return Math.hypot(a[0], a[1], a[2]); }
+function norm3(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+function dist3(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]); }
+
+const M4 = {
+  perspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2), nf = 1 / (near - far);
+    return new Float32Array([f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, far * nf, -1, 0, 0, far * near * nf, 0]);
+  },
+  ortho(l, r, b, t, n, f) {
+    return new Float32Array([2 / (r - l), 0, 0, 0, 0, 2 / (t - b), 0, 0, 0, 0, 1 / (n - f), 0,
+      (l + r) / (l - r), (t + b) / (b - t), n / (n - f), 1]);
+  },
+  lookAt(eye, at, up) {
+    const z = norm3(sub3(eye, at)), x = norm3(cross3(up, z)), y = cross3(z, x);
+    return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+      -dot3(x, eye), -dot3(y, eye), -dot3(z, eye), 1]);
+  },
+  mul(a, b) {
+    const o = new Float32Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+      let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k];
+      o[c * 4 + r] = s;
+    }
+    return o;
+  },
+  invert(m) {
+    const a = m, o = new Float32Array(16);
+    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3], a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11], a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+    const b00 = a00 * a11 - a01 * a10, b01 = a00 * a12 - a02 * a10, b02 = a00 * a13 - a03 * a10;
+    const b03 = a01 * a12 - a02 * a11, b04 = a01 * a13 - a03 * a11, b05 = a02 * a13 - a03 * a12;
+    const b06 = a20 * a31 - a21 * a30, b07 = a20 * a32 - a22 * a30, b08 = a20 * a33 - a23 * a30;
+    const b09 = a21 * a32 - a22 * a31, b10 = a21 * a33 - a23 * a31, b11 = a22 * a33 - a23 * a32;
+    let det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+    if (!det) return o;
+    det = 1 / det;
+    o[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det; o[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+    o[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det; o[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+    o[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det; o[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+    o[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det; o[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+    o[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det; o[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+    o[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det; o[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+    o[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det; o[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+    o[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det; o[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+    return o;
+  },
+  xform(m, v) { // homogeneous transform of a point, returns [x,y,z,w]
+    const x = v[0], y = v[1], z = v[2];
+    return [m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13],
+            m[2] * x + m[6] * y + m[10] * z + m[14], m[3] * x + m[7] * y + m[11] * z + m[15]];
+  },
+};
+
+function inv3(m) { // m: 9 numbers, row-major
+  const [a, b, c, d, e, f, g, h, i] = m;
+  const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+  const det = a * A + b * B + c * C;
+  if (Math.abs(det) < 1e-14) return null;
+  const s = 1 / det;
+  return [A * s, -(b * i - c * h) * s, (b * f - c * e) * s,
+          B * s, (a * i - c * g) * s, -(a * f - c * d) * s,
+          C * s, -(a * h - b * g) * s, (a * e - b * d) * s];
+}
+
+// ------------------------------------------------------------ geometry
+function geodesic(freq) {
+  const t = (1 + Math.sqrt(5)) / 2;
+  const iv = [[-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0], [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+              [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1]].map(norm3);
+  const faces = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2],
+                 [10, 7, 6], [7, 1, 8], [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5],
+                 [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+  const verts = [], tris = [], map = new Map();
+  const addV = (p) => {
+    p = norm3(p);
+    const key = p.map((v) => Math.round(v * 1e5)).join(',');
+    let id = map.get(key);
+    if (id === undefined) { id = verts.length; verts.push(p); map.set(key, id); }
+    return id;
+  };
+  for (const [ia, ib, ic] of faces) {
+    const A = iv[ia], B = iv[ib], C = iv[ic];
+    const grid = [];
+    for (let i = 0; i <= freq; i++) {
+      grid.push([]);
+      for (let j = 0; j <= freq - i; j++) {
+        grid[i].push(addV(add3(A, add3(mul3(sub3(B, A), i / freq), mul3(sub3(C, A), j / freq)))));
+      }
+    }
+    for (let i = 0; i < freq; i++) {
+      for (let j = 0; j < freq - i; j++) {
+        tris.push([grid[i][j], grid[i + 1][j], grid[i][j + 1]]);
+        if (i + j < freq - 1) tris.push([grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]]);
+      }
+    }
+  }
+  for (const tr of tris) { // orient outward
+    const a = verts[tr[0]], b = verts[tr[1]], c = verts[tr[2]];
+    if (dot3(cross3(sub3(b, a), sub3(c, a)), add3(a, add3(b, c))) < 0) { const s = tr[1]; tr[1] = tr[2]; tr[2] = s; }
+  }
+  return { verts, tris };
+}
+
+function headShape(d, s = 1) {
+  return [HEAD_C[0] + d[0] * HEAD_R * s,
+          HEAD_C[1] + d[1] * (d[1] > 0 ? HEAD_RY_TOP : HEAD_RY_BOT) * s,
+          HEAD_C[2] + d[2] * HEAD_R * s];
+}
+function headNormal(d) {
+  return norm3([d[0] / HEAD_R, d[1] / (d[1] > 0 ? HEAD_RY_TOP : HEAD_RY_BOT), d[2] / HEAD_R]);
+}
+function dirAzEl(az, el) { return [Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)]; }
+
+function tentRadius(s) {
+  const u = clamp(s / TENT_LEN, 0, 1);
+  return 0.095 + 0.195 * Math.pow(1 - u, 1.15);
+}
+function tentRadiusDeriv(s) {
+  if (s <= 0 || s >= TENT_LEN) return 0;
+  const u = s / TENT_LEN;
+  return -0.195 * 1.15 * Math.pow(1 - u, 0.15) / TENT_LEN;
+}
+
+// Rest centreline of tentacle t: lies on the table, then curls upward at the tip.
+function makeCenterline(t) {
+  const phi = (t + 0.5) * Math.PI * 2 / NT;
+  const R = [Math.cos(phi), 0, Math.sin(phi)];
+  const B = [-Math.sin(phi), 0, Math.cos(phi)];
+  const curlTotal = 2.2;
+  const sc = 0.56 * TENT_LEN;
+  const kMax = 2 * curlTotal / (TENT_LEN - sc);
+  const alphaAt = (s) => {
+    const sl = clamp(s, 0, TENT_LEN);
+    const x = clamp((sl - sc) / (TENT_LEN - sc), 0, 1);
+    return Math.atan(tentRadiusDeriv(sl)) + kMax * (TENT_LEN - sc) * (x * x * x - 0.5 * x * x * x * x);
+  };
+  const h = 0.002, s0 = -0.4, s1 = TENT_LEN + 0.6;
+  const n = Math.ceil((s1 - s0) / h) + 1;
+  const rho = new Float64Array(n), y = new Float64Array(n);
+  const i0 = Math.round((0 - s0) / h);
+  rho[i0] = ROOT_RHO; y[i0] = tentRadius(0);
+  for (let i = i0 + 1; i < n; i++) {
+    const a = alphaAt(s0 + (i - 0.5) * h);
+    rho[i] = rho[i - 1] + Math.cos(a) * h; y[i] = y[i - 1] + Math.sin(a) * h;
+  }
+  for (let i = i0 - 1; i >= 0; i--) {
+    const a = alphaAt(s0 + (i + 0.5) * h);
+    rho[i] = rho[i + 1] - Math.cos(a) * h; y[i] = y[i + 1] - Math.sin(a) * h;
+  }
+  return (s) => {
+    const f = clamp((s - s0) / h, 0, n - 1.001), i = Math.floor(f), w = f - i;
+    const r = rho[i] * (1 - w) + rho[i + 1] * w, yy = y[i] * (1 - w) + y[i + 1] * w;
+    const a = alphaAt(s);
+    const T = add3(mul3(R, Math.cos(a)), [0, Math.sin(a), 0]);
+    const N = cross3(B, T);
+    return { c: [R[0] * r, yy, R[2] * r], T, N, B, r: tentRadius(s), dr: tentRadiusDeriv(s) };
+  };
+}
+
+// ------------------------------------------------------------ soft-body model
+function buildModel() {
+  const P = [], info = [], springs = [], keys = new Set();
+  const addP = (pos, kind, group, seg, radius) => { P.push(pos); info.push({ kind, group, seg, radius }); return P.length - 1; };
+  const spring = (a, b, type) => {
+    if (a === b) return;
+    const key = a < b ? a * 65536 + b : b * 65536 + a;
+    if (keys.has(key)) return;
+    keys.add(key);
+    springs.push({ a, b, rest: dist3(P[a], P[b]), type });
+  };
+  const nearest = (p, list, k) => list.map((j) => [j, dist3(p, P[j])]).sort((x, y) => x[1] - y[1]).slice(0, k).map((x) => x[0]);
+
+  // --- head: outer shell, inner shell, core
+  const og = geodesic(6), ig = geodesic(3);
+  const NO = og.verts.length, NI = ig.verts.length;
+  for (const d of og.verts) addP(headShape(d), KIND.OUTER, 0, 0, 0.035);
+  for (const d of ig.verts) addP(headShape(d, 0.5), KIND.INNER, 0, 0, 0.1);
+  const core = addP(HEAD_C.slice(), KIND.CORE, 0, 0, 0.2);
+  const headCount = P.length;
+  const outerIdx = [...Array(NO).keys()], innerIdx = [...Array(NI).keys()].map((i) => i + NO);
+
+  const nbr = Array.from({ length: NO }, () => new Set());
+  for (const [a, b, c] of og.tris) { nbr[a].add(b).add(c); nbr[b].add(a).add(c); nbr[c].add(a).add(b); }
+  for (let i = 0; i < NO; i++) for (const j of nbr[i]) spring(i, j, ST.HEAD_SHELL);
+  for (let i = 0; i < NO; i++) for (const j of nbr[i]) for (const k of nbr[j]) if (k !== i && !nbr[i].has(k)) spring(i, k, ST.HEAD_BEND);
+  for (let i = 0; i < NO; i++) for (const j of nearest(P[i], innerIdx, 3)) spring(i, j, ST.HEAD_INT);
+  for (const [a, b, c] of ig.tris) { spring(NO + a, NO + b, ST.HEAD_INT); spring(NO + b, NO + c, ST.HEAD_INT); spring(NO + c, NO + a, ST.HEAD_INT); }
+  for (const j of innerIdx) spring(j, core, ST.HEAD_INT);
+  for (const i of outerIdx) spring(i, core, ST.HEAD_RAD);
+
+  // pressure fans: for each outer vertex, the (j,k) pairs of its incident triangles (CCW from outside)
+  const fanLists = Array.from({ length: NO }, () => []);
+  for (const [a, b, c] of og.tris) { fanLists[a].push([b, c]); fanLists[b].push([c, a]); fanLists[c].push([a, b]); }
+  let restVolume = 0;
+  for (const [a, b, c] of og.tris) {
+    const pa = sub3(P[a], P[core]), pb = sub3(P[b], P[core]), pc = sub3(P[c], P[core]);
+    restVolume += dot3(pa, cross3(pb, pc)) / 6;
+  }
+
+  // --- tentacles
+  const tentBase = P.length;
+  const centerlines = [];
+  const cIdx = (t, k) => tentBase + (t * NS + k) * SEGP;
+  for (let t = 0; t < NT; t++) {
+    const cl = makeCenterline(t);
+    centerlines.push(cl);
+    for (let k = 0; k < NS; k++) {
+      const f = cl(k * DS);
+      addP(f.c, KIND.CENTER, t + 1, k, 0.55 * f.r);
+      for (let i = 0; i < NR; i++) {
+        const th = Math.PI * 2 * (i + 0.5) / NR;
+        addP(add3(f.c, add3(mul3(f.N, Math.cos(th) * f.r), mul3(f.B, Math.sin(th) * f.r))), KIND.RING, t + 1, k, 0.035);
+      }
+    }
+    const ring = (k, i) => cIdx(t, k) + 1 + ((i % NR) + NR) % NR;
+    for (let k = 0; k < NS; k++) {
+      const c = cIdx(t, k);
+      for (let i = 0; i < NR; i++) {
+        spring(ring(k, i), ring(k, i + 1), ST.T_RING);
+        spring(ring(k, i), ring(k, i + 2), ST.T_RING);
+        if (i < NR / 2) spring(ring(k, i), ring(k, i + NR / 2), ST.T_RING);
+        spring(c, ring(k, i), ST.T_RING);
+      }
+      if (k + 1 < NS) {
+        const c1 = cIdx(t, k + 1);
+        spring(c, c1, ST.T_CORE);
+        for (let i = 0; i < NR; i++) {
+          spring(ring(k, i), ring(k + 1, i), ST.T_AXIAL);
+          spring(ring(k, i), ring(k + 1, i + 1), ST.T_SHEAR);
+          spring(ring(k, i), ring(k + 1, i - 1), ST.T_SHEAR);
+          spring(c, ring(k + 1, i), ST.T_SHEAR);
+          spring(ring(k, i), c1, ST.T_SHEAR);
+        }
+      }
+      if (k + 2 < NS) {
+        spring(c, cIdx(t, k + 2), ST.T_BEND);
+        for (let i = 0; i < NR; i++) spring(ring(k, i), ring(k + 2, i), ST.T_BEND);
+      }
+    }
+  }
+  // attach tentacle roots to the head, and a soft "skirt" between neighbouring roots
+  const headAll = [...Array(headCount).keys()];
+  for (let t = 0; t < NT; t++) {
+    for (let k = 0; k < 3; k++) {
+      for (let q = 0; q < SEGP; q++) {
+        const pi = cIdx(t, k) + q;
+        for (const j of nearest(P[pi], headAll, 3)) spring(pi, j, ST.ATTACH);
+      }
+    }
+    spring(cIdx(t, 0), core, ST.ATTACH);
+    spring(cIdx(t, 1), core, ST.ATTACH);
+    for (let k = 0; k < 4; k++) spring(cIdx(t, k), cIdx((t + 1) % NT, k), ST.SKIRT);
+  }
+
+  const N = P.length;
+  // adjacency (gather form: every spring is stored for both endpoints)
+  const deg = new Uint32Array(N);
+  for (const s of springs) { deg[s.a]++; deg[s.b]++; }
+  const start = new Uint32Array(N + 1);
+  for (let i = 0; i < N; i++) start[i + 1] = start[i] + deg[i];
+  const fill = start.slice(0, N);
+  const adjBuf = new ArrayBuffer(start[N] * 16);
+  const adjU = new Uint32Array(adjBuf), adjF = new Float32Array(adjBuf);
+  for (const s of springs) {
+    for (const [i, j] of [[s.a, s.b], [s.b, s.a]]) {
+      const e = fill[i]++;
+      adjU[e * 4] = j; adjF[e * 4 + 1] = s.rest; adjF[e * 4 + 2] = 1; adjU[e * 4 + 3] = s.type;
+    }
+  }
+  const fanStart = new Uint32Array(N), fanCount = new Uint32Array(N);
+  const fanArr = [];
+  for (let i = 0; i < NO; i++) { fanStart[i] = fanArr.length / 2; fanCount[i] = fanLists[i].length; for (const [j, k] of fanLists[i]) fanArr.push(j, k); }
+
+  const pstBuf = new ArrayBuffer(N * 48);
+  const pf = new Float32Array(pstBuf), pu = new Uint32Array(pstBuf);
+  for (let i = 0; i < N; i++) {
+    const o = i * 12;
+    pf[o] = P[i][0]; pf[o + 1] = P[i][1]; pf[o + 2] = P[i][2]; pf[o + 3] = info[i].radius;
+    pu[o + 4] = info[i].kind; pu[o + 5] = info[i].group; pu[o + 6] = info[i].seg; pu[o + 7] = 0;
+    pu[o + 8] = start[i]; pu[o + 9] = deg[i]; pu[o + 10] = fanStart[i]; pu[o + 11] = fanCount[i];
+  }
+  const tris = new Uint32Array(og.tris.length * 4);
+  og.tris.forEach(([a, b, c], i) => { tris[i * 4] = a; tris[i * 4 + 1] = b; tris[i * 4 + 2] = c; });
+
+  const init = new Float32Array(N * 8);
+  for (let i = 0; i < N; i++) {
+    init[i * 8] = P[i][0]; init[i * 8 + 1] = P[i][1] + DROP; init[i * 8 + 2] = P[i][2]; init[i * 8 + 3] = info[i].kind;
+  }
+  const pairs = new Uint32Array(springs.length * 4), pairsF = new Float32Array(pairs.buffer);
+  springs.forEach((s, i) => { pairs[i * 4] = s.a; pairs[i * 4 + 1] = s.b; pairsF[i * 4 + 2] = s.rest; pairs[i * 4 + 3] = s.type; });
+
+  const segR = new Float32Array(16);
+  for (let k = 0; k < NS; k++) segR[k] = tentRadius(k * DS);
+
+  return { P, info, N, NO, NI, core, headCount, tentBase, cIdx, centerlines, springs, adjBuf, pstBuf,
+           fans: new Uint32Array(fanArr.length ? fanArr : [0, 0]), tris, numTris: og.tris.length, restVolume,
+           init, pairs, numPairs: springs.length, segR };
+}
+
+// ------------------------------------------------------------ render mesh + MLS skinning weights
+const KSKIN = 12;
+function buildRenderMesh(model) {
+  const verts = []; // {X, n, part, attr:[az, el, under, furMask]}
+  const idx = [];
+  // fur length mask: pressed flat around the safety eyes, and a short-pile "muzzle" patch
+  // so the embroidered cheeks and smile read clearly
+  const eyeMask = (az, el) => {
+    const de = Math.min(Math.hypot(az - EYE_AZ, el - EYE_EL), Math.hypot(az + EYE_AZ, el - EYE_EL));
+    const eye = smoothstep(EYE_R * 0.85, EYE_R * 1.8, de);
+    const e = Math.hypot(az / 0.82, (el + 0.24) / 0.2);
+    return Math.min(eye, lerp(0.42, 1, smoothstep(0.7, 1.2, e)));
+  };
+  // head
+  const hg = geodesic(24);
+  for (const d of hg.verts) {
+    const az = Math.atan2(d[0], d[2]), el = Math.asin(clamp(d[1], -1, 1));
+    verts.push({ X: headShape(d), n: headNormal(d), part: 0, attr: [az, el, 0, eyeMask(az, el)] });
+  }
+  for (const tr of hg.tris) idx.push(tr[0], tr[1], tr[2]);
+  const headVerts = verts.length;
+  // tentacles: tubes with a rounded tip cap
+  const NA = 20, CAPN = 5;
+  for (let t = 0; t < NT; t++) {
+    const cl = model.centerlines[t];
+    const base = verts.length;
+    const ringsS = [];
+    for (let s = -0.06; s <= TENT_LEN + 1e-6; s += DS / 4) ringsS.push(s);
+    let ringCount = 0;
+    const pushRing = (c, T, N, B, r, dr, capBeta) => {
+      for (let a = 0; a < NA; a++) {
+        const th = Math.PI * 2 * a / NA;
+        const radial = add3(mul3(N, Math.cos(th)), mul3(B, Math.sin(th)));
+        let n;
+        if (capBeta === undefined) n = norm3(sub3(radial, mul3(T, dr)));
+        else n = norm3(add3(mul3(radial, Math.cos(capBeta)), mul3(T, Math.sin(capBeta))));
+        const under = clamp((Math.cos(th) + 0.15) / -0.75, 0, 1);
+        verts.push({ X: add3(c, mul3(radial, r)), n, part: t + 1, attr: [9, 9, under * under * (3 - 2 * under), 1] });
+      }
+      ringCount++;
+    };
+    for (const s of ringsS) { const f = cl(s); pushRing(f.c, f.T, f.N, f.B, f.r, f.dr); }
+    const fe = cl(TENT_LEN), rt = fe.r;
+    for (let j = 1; j < CAPN; j++) {
+      const b = (j / CAPN) * Math.PI / 2;
+      pushRing(add3(fe.c, mul3(fe.T, rt * Math.sin(b) * 1.15)), fe.T, fe.N, fe.B, rt * Math.cos(b), 0, b);
+    }
+    const tip = verts.length;
+    verts.push({ X: add3(fe.c, mul3(fe.T, rt * 1.15)), n: fe.T, part: t + 1, attr: [9, 9, 0.5, 1] });
+    for (let m = 0; m + 1 < ringCount; m++) {
+      for (let a = 0; a < NA; a++) {
+        const i00 = base + m * NA + a, i01 = base + m * NA + (a + 1) % NA;
+        const i10 = base + (m + 1) * NA + a, i11 = base + (m + 1) * NA + (a + 1) % NA;
+        idx.push(i00, i10, i11, i00, i11, i01);
+      }
+    }
+    const last = base + (ringCount - 1) * NA;
+    for (let a = 0; a < NA; a++) idx.push(last + a, tip, last + (a + 1) % NA);
+  }
+  // eye anchors (not part of any triangle)
+  const eyeBase = verts.length;
+  for (const az of [-EYE_AZ, EYE_AZ]) {
+    const d = dirAzEl(az, EYE_EL);
+    verts.push({ X: headShape(d), n: headNormal(d), part: 0, attr: [az, EYE_EL, 0, 0] });
+  }
+  // fix triangle winding so every face points along its vertex normals (outward)
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = verts[idx[i]], b = verts[idx[i + 1]], c = verts[idx[i + 2]];
+    const fn = cross3(sub3(b.X, a.X), sub3(c.X, a.X));
+    if (dot3(fn, add3(a.n, add3(b.n, c.n))) < 0) { const s = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = s; }
+  }
+
+  // ----- affine MLS weights: x = Σ a_j p_j, tangents = Σ g1_j p_j, Σ g2_j p_j
+  const V = verts.length;
+  const skin = new Float32Array(V * KSKIN * 4), skinU = new Uint32Array(skin.buffer);
+  const P = model.P;
+  const headSurf = [...Array(model.NO).keys()];
+  const headInt = [...Array(model.NI + 1).keys()].map((i) => i + model.NO);
+  const tentSurf = [], tentInt = [];
+  for (let t = 0; t < NT; t++) {
+    const s = [], c = [];
+    for (let k = 0; k < NS; k++) { c.push(model.cIdx(t, k)); for (let i = 1; i <= NR; i++) s.push(model.cIdx(t, k) + i); }
+    tentSurf.push(s); tentInt.push(c);
+  }
+  const kNearest = (X, list, k) => {
+    const best = [];
+    for (const j of list) {
+      const p = P[j];
+      const d = Math.hypot(X[0] - p[0], X[1] - p[1], X[2] - p[2]);
+      if (best.length <= k || d < best[best.length - 1][1]) {
+        let pos = best.length;
+        while (pos > 0 && best[pos - 1][1] > d) pos--;
+        best.splice(pos, 0, [j, d]);
+        if (best.length > k + 1) best.pop();
+      }
+    }
+    return best;
+  };
+  for (let v = 0; v < V; v++) {
+    const { X, n, part } = verts[v];
+    const surf = part === 0 ? headSurf : tentSurf[part - 1];
+    const intl = part === 0 ? headInt : tentInt[part - 1];
+    const KS = 9, KI = 3;
+    const bs = kNearest(X, surf, KS), bi = kNearest(X, intl, KI);
+    const hs = bs[KS][1] + 1e-4, hi = bi[KI][1] + 1e-4;
+    const inf = [];
+    for (let q = 0; q < KS; q++) { const x = bs[q][1] / hs; inf.push([bs[q][0], Math.pow(1 - x * x, 3)]); }
+    for (let q = 0; q < KI; q++) { const x = bi[q][1] / hi; inf.push([bi[q][0], 0.6 * Math.pow(1 - x * x, 3)]); }
+    let ws = 0; for (const e of inf) ws += e[1];
+    for (const e of inf) e[1] /= ws;
+    const c0 = [0, 0, 0];
+    for (const [j, w] of inf) { c0[0] += w * P[j][0]; c0[1] += w * P[j][1]; c0[2] += w * P[j][2]; }
+    const A = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+    const qs = inf.map(([j, w]) => {
+      const q = sub3(P[j], c0);
+      A[0] += w * q[0] * q[0]; A[1] += w * q[0] * q[1]; A[2] += w * q[0] * q[2];
+      A[4] += w * q[1] * q[1]; A[5] += w * q[1] * q[2]; A[8] += w * q[2] * q[2];
+      return q;
+    });
+    A[3] = A[1]; A[6] = A[2]; A[7] = A[5];
+    const tr = A[0] + A[4] + A[8];
+    A[0] += tr * 1e-4; A[4] += tr * 1e-4; A[8] += tr * 1e-4;
+    const Ai = inv3(A);
+    const t1 = norm3(Math.abs(n[1]) < 0.9 ? cross3(n, [0, 1, 0]) : cross3(n, [1, 0, 0]));
+    const t2 = cross3(n, t1);
+    const ap = (vec) => [Ai[0] * vec[0] + Ai[1] * vec[1] + Ai[2] * vec[2], Ai[3] * vec[0] + Ai[4] * vec[1] + Ai[5] * vec[2],
+                         Ai[6] * vec[0] + Ai[7] * vec[1] + Ai[8] * vec[2]];
+    const g = ap(sub3(X, c0)), g1 = ap(t1), g2 = ap(t2);
+    for (let q = 0; q < KSKIN; q++) {
+      const o = (v * KSKIN + q) * 4;
+      const [j, w] = inf[q];
+      skin[o] = w * (1 + dot3(qs[q], g));
+      skin[o + 1] = w * dot3(qs[q], g1);
+      skin[o + 2] = w * dot3(qs[q], g2);
+      skinU[o + 3] = j;
+    }
+  }
+
+  const vst = new Float32Array(V * 8);
+  verts.forEach((v, i) => { vst.set([v.X[0], v.X[1], v.X[2], v.part, ...v.attr], i * 8); });
+  return { V, idx: new Uint32Array(idx), numIdx: idx.length, skin, vst, eyeBase, headVerts };
+}
+
+function buildTable() {
+  const pos = [], idx = [];
+  const NSEG = 14;
+  const outline = (hx, hz, rc) => {
+    const pts = [];
+    const cs = [[hx - rc, hz - rc, 0], [-(hx - rc), hz - rc, 0.5], [-(hx - rc), -(hz - rc), 1], [hx - rc, -(hz - rc), 1.5]];
+    for (const [cx, cz, a0] of cs) for (let i = 0; i <= NSEG; i++) {
+      const a = (a0 + i / NSEG * 0.5) * Math.PI;
+      pts.push([cx + rc * Math.cos(a), cz + rc * Math.sin(a), Math.cos(a), Math.sin(a)]);
+    }
+    return pts;
+  };
+  const rings = [];
+  const pushRing = (pts, y, ny, nh) => {
+    const b = pos.length / 6;
+    for (const [x, z, nx, nz] of pts) pos.push(x, y, z, nx * nh, ny, nz * nh);
+    rings.push(b);
+  };
+  const pad = TABLE_PAD;
+  const NP = 7;
+  for (let j = 0; j <= NP; j++) {
+    const b = j / NP * Math.PI / 2;
+    const o = -pad + pad * Math.sin(b);
+    pushRing(outline(TABLE_HX + o, TABLE_HZ + o, TABLE_RC + o), -pad * (1 - Math.cos(b)), Math.cos(b), Math.sin(b));
+  }
+  pushRing(outline(TABLE_HX, TABLE_HZ, TABLE_RC), -0.75, 0, 1);
+  const M = (NSEG + 1) * 4;
+  const center = pos.length / 6;
+  pos.push(0, 0, 0, 0, 1, 0);
+  for (let a = 0; a < M; a++) idx.push(center, rings[0] + a, rings[0] + (a + 1) % M);
+  for (let r = 0; r + 1 < rings.length; r++) for (let a = 0; a < M; a++) {
+    const i00 = rings[r] + a, i01 = rings[r] + (a + 1) % M, i10 = rings[r + 1] + a, i11 = rings[r + 1] + (a + 1) % M;
+    idx.push(i00, i10, i11, i00, i11, i01);
+  }
+  // orient each triangle to agree with its vertex normals
+  for (let i = 0; i < idx.length; i += 3) {
+    const g = (k) => [pos[idx[k] * 6], pos[idx[k] * 6 + 1], pos[idx[k] * 6 + 2]];
+    const nn = (k) => [pos[idx[k] * 6 + 3], pos[idx[k] * 6 + 4], pos[idx[k] * 6 + 5]];
+    const a = g(i), b = g(i + 1), c = g(i + 2);
+    const fn = cross3(sub3(b, a), sub3(c, a));
+    if (dot3(fn, add3(nn(i), add3(nn(i + 1), nn(i + 2)))) < 0) { const s = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = s; }
+  }
+  return { vb: new Float32Array(pos), ib: new Uint32Array(idx), count: idx.length };
+}
+
+function buildSphere(nu, nv) {
+  const pos = [], idx = [];
+  for (let j = 0; j <= nv; j++) {
+    const v = j / nv * Math.PI;
+    for (let i = 0; i <= nu; i++) {
+      const u = i / nu * Math.PI * 2;
+      pos.push(Math.sin(v) * Math.cos(u), Math.sin(v) * Math.sin(u), Math.cos(v));
+    }
+  }
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) {
+    const a = j * (nu + 1) + i, b = a + nu + 1;
+    idx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  for (let i = 0; i < idx.length; i += 3) {
+    const g = (k) => [pos[idx[k] * 3], pos[idx[k] * 3 + 1], pos[idx[k] * 3 + 2]];
+    const a = g(i), b = g(i + 1), c = g(i + 2);
+    if (dot3(cross3(sub3(b, a), sub3(c, a)), add3(a, add3(b, c))) < 0) { const s = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = s; }
+  }
+  return { vb: new Float32Array(pos), ib: new Uint16Array(idx), count: idx.length };
+}
+
+// ==================================================================== WGSL
+const WGSL_PHYS = /* wgsl */`
+struct Sim {
+  dt: f32, gravity: f32, dragF: f32, zeta: f32,
+  friction: f32, wallX: f32, wallZ: f32, numP: u32,
+  grabIdx: i32, grabK: f32, grabSigma2: f32, grabDamp: f32,
+  grabTarget: vec4f,
+  kT: array<vec4f, 3>,
+  kC: array<vec4f, 3>,
+  segR: array<vec4f, 4>,
+  pressureK: f32, restVolume: f32, numTris: u32, coreIdx: u32,
+  headCount: u32, outerCount: u32, tentBase: u32, ffFriction: f32,
+};
+struct PState { pos: vec4f, vel: vec4f, };
+struct PStatic { rest: vec4f, info: vec4u, adj: vec4u, };
+struct Spring { other: u32, rest: f32, krel: f32, kind: u32, };
+
+@group(0) @binding(0) var<uniform> S: Sim;
+@group(0) @binding(1) var<storage, read> stIn: array<PState>;
+@group(0) @binding(2) var<storage, read_write> stOut: array<PState>;
+@group(0) @binding(3) var<storage, read> pst: array<PStatic>;
+@group(0) @binding(4) var<storage, read> springs: array<Spring>;
+@group(0) @binding(5) var<storage, read> fans: array<vec2u>;
+@group(0) @binding(6) var<storage, read_write> simState: array<f32>;
+@group(0) @binding(7) var<storage, read> tris: array<vec4u>;
+
+const NS: u32 = ${NS}u;
+const NT: u32 = ${NT}u;
+const SEGP: u32 = ${SEGP}u;
+const K_OUTER: u32 = 0u;
+const K_CENTER: u32 = 3u;
+const K_RING: u32 = 4u;
+const WALL_RC: f32 = ${WALL_RC.toFixed(3)};
+
+fn kTens(t: u32) -> f32 { return S.kT[t >> 2u][t & 3u]; }
+fn kComp(t: u32) -> f32 { return S.kC[t >> 2u][t & 3u]; }
+// fabric barely stretches: tension stiffens progressively past a small strain (capped for stability)
+fn strainLimit(kind: u32, strain: f32) -> f32 {
+  var e0 = 1e9;
+  if (kind == 5u || kind == 6u) { e0 = 0.05; }
+  else if (kind == 0u || kind == 9u) { e0 = 0.12; }
+  return clamp(1.0 + 40.0 * (strain - e0), 1.0, 3.5);
+}
+fn segRad(k: u32) -> f32 { return S.segR[k >> 2u][k & 3u]; }
+fn centerIdx(t: u32, k: u32) -> u32 { return S.tentBase + (t * NS + k) * SEGP; }
+const HEAD_COLL_R: f32 = 0.11;
+// contact radius of a tentacle particle: ring particles cover roughly a third of the local ring
+// spacing (so nothing slips between them), centre particles fill the core of the tube
+fn collR(isCenter: bool, k: u32) -> f32 { return select(0.03 + segRad(k) * 0.22, segRad(k) * 0.72, isCenter); }
+
+// ---- head volume (single workgroup reduction)
+var<workgroup> red: array<f32, 256>;
+@compute @workgroup_size(256)
+fn volume(@builtin(local_invocation_index) li: u32) {
+  let c = stIn[S.coreIdx].pos.xyz;
+  var acc = 0.0;
+  for (var t = li; t < S.numTris; t += 256u) {
+    let tr = tris[t];
+    let a = stIn[tr.x].pos.xyz - c;
+    let b = stIn[tr.y].pos.xyz - c;
+    let d = stIn[tr.z].pos.xyz - c;
+    acc += dot(a, cross(b, d));
+  }
+  red[li] = acc;
+  workgroupBarrier();
+  for (var s = 128u; s > 0u; s = s >> 1u) {
+    if (li < s) { red[li] += red[li + s]; }
+    workgroupBarrier();
+  }
+  if (li == 0u) { simState[0] = red[0] / 6.0; }
+}
+
+// contact against a moving collider point: positional push-out + inelastic normal response + friction
+fn resolveContact(pn: ptr<function, vec3f>, vn: ptr<function, vec3f>, c: vec3f, cv: vec3f, minD: f32, share: f32) {
+  let d = *pn - c;
+  let d2 = dot(d, d);
+  if (d2 >= minD * minD) { return; }
+  let dl = sqrt(d2);
+  let n = select(vec3f(0.0, 1.0, 0.0), d / dl, dl > 1e-6);
+  *pn = *pn + n * ((minD - dl) * share);
+  let rv = *vn - cv;
+  let vnn = dot(rv, n);
+  if (vnn < 0.0) {
+    let vt = rv - n * vnn;
+    let vtl = length(vt);
+    let red2 = min(vtl, -vnn * S.ffFriction);
+    var dv = -n * vnn * share;
+    if (vtl > 1e-6) { dv -= vt * (red2 / vtl) * share; }
+    *vn = *vn + dv;
+  }
+}
+
+// contact against every particle of tentacle segment (t2, k2), with a cheap bounding-sphere reject.
+// Both bodies of every pair run the same test with the same radii, so contacts conserve momentum.
+fn segmentContacts(pn: ptr<function, vec3f>, vn: ptr<function, vec3f>, t2: u32, k2: u32, myR: f32) {
+  let ci = centerIdx(t2, k2);
+  if (distance(*pn, stIn[ci].pos.xyz) > segRad(k2) * 1.35 + collR(false, k2) + myR + 0.05) { return; }
+  for (var q = 0u; q < SEGP; q++) {
+    let o = stIn[ci + q];
+    resolveContact(pn, vn, o.pos.xyz, o.vel.xyz, myR + collR(q == 0u, k2), 0.5);
+  }
+}
+
+@compute @workgroup_size(64)
+fn step(@builtin(global_invocation_id) gid: vec3u) {
+  let i = gid.x;
+  if (i >= S.numP) { return; }
+  let st = stIn[i];
+  let me = pst[i];
+  let p = st.pos.xyz;
+  let v = st.vel.xyz;
+  let kind = me.info.x;
+  let group = me.info.y;
+  let seg = me.info.z;
+  let rad = me.rest.w;
+
+  // ---- internal forces (gather over this particle's springs)
+  var f = vec3f(0.0, -S.gravity, 0.0);
+  let a0 = me.adj.x;
+  let a1 = a0 + me.adj.y;
+  for (var s = a0; s < a1; s++) {
+    let sp = springs[s];
+    let o = stIn[sp.other];
+    let d = o.pos.xyz - p;
+    let L = length(d);
+    if (L > 1e-7) {
+      let dir = d / L;
+      let x = L - sp.rest;
+      var k = sp.krel * kComp(sp.kind);
+      if (x > 0.0) { k = sp.krel * kTens(sp.kind) * strainLimit(sp.kind, x / sp.rest); }
+      let c = S.zeta * sqrt(k);
+      f += dir * (k * x + c * dot(o.vel.xyz - v, dir));
+    }
+  }
+
+  // ---- head pressure (gradient of the enclosed volume)
+  if (kind == K_OUTER) {
+    var g = vec3f(0.0);
+    let f0 = me.adj.z;
+    for (var m = f0; m < f0 + me.adj.w; m++) {
+      let pr = fans[m];
+      g += cross(stIn[pr.x].pos.xyz - p, stIn[pr.y].pos.xyz - p);
+    }
+    let V = simState[0];
+    let pres = S.pressureK * clamp((S.restVolume - V) / S.restVolume, -0.5, 0.8);
+    f += g * (pres / 6.0);
+  }
+
+  // ---- mouse spring (Gaussian falloff over the grabbed body part, in rest space)
+  if (S.grabIdx >= 0) {
+    let gi = u32(S.grabIdx);
+    let gp = pst[gi];
+    if (gp.info.y == group) {
+      let dr = me.rest.xyz - gp.rest.xyz;
+      let w = exp(-dot(dr, dr) / S.grabSigma2);
+      if (w > 0.004) {
+        var e = S.grabTarget.xyz - stIn[gi].pos.xyz;
+        let el = length(e);
+        if (el > S.grabTarget.w) { e *= S.grabTarget.w / el; }
+        f += w * (e * S.grabK - v * S.grabDamp);
+      }
+    }
+  }
+
+  // ---- integrate (symplectic Euler)
+  var vn = (v + f * S.dt) * S.dragF;
+  let spd = length(vn);
+  if (spd > 45.0) { vn *= 45.0 / spd; }
+  var pn = p + vn * S.dt;
+
+  // ---- collisions
+  // Self-collision is a set of symmetric sphere-pair contacts: every pair is resolved half by each
+  // side. The root hub (segments 0-3, sewn under the head) is excluded on both sides.
+  if (group > 0u && seg >= 4u) {
+    let t = group - 1u;
+    let myR = collR(kind == K_CENTER, seg);
+    // tentacle vs head surface
+    let core = stIn[S.coreIdx].pos.xyz;
+    if (distance(pn, core) < 2.4) {
+      for (var j = 0u; j < S.outerCount; j++) {
+        let hj = stIn[j];
+        resolveContact(&pn, &vn, hj.pos.xyz, hj.vel.xyz, HEAD_COLL_R + myR, 0.5);
+      }
+    }
+    // tentacle vs tentacles (including its own segments at least three apart)
+    for (var t2 = 0u; t2 < NT; t2++) {
+      for (var k2 = 4u; k2 < NS; k2++) {
+        if (t2 == t && k2 + 3u > seg && k2 < seg + 3u) { continue; }
+        segmentContacts(&pn, &vn, t2, k2, myR);
+      }
+    }
+  } else if (kind == K_OUTER) {
+    // head surface vs tentacles: the mirror image of the tentacle-vs-head contacts above
+    for (var t2 = 0u; t2 < NT; t2++) {
+      for (var k2 = 4u; k2 < NS; k2++) {
+        segmentContacts(&pn, &vn, t2, k2, HEAD_COLL_R);
+      }
+    }
+  }
+
+  // table top (Coulomb friction from the normal impulse)
+  if (pn.y < rad) {
+    pn.y = rad;
+    if (vn.y < 0.0) {
+      let J = -vn.y;
+      vn.y = 0.0;
+      let vt = vec2f(vn.x, vn.z);
+      let s = length(vt);
+      let ns = max(s - S.friction * J, 0.0);
+      let vt2 = select(vec2f(0.0), vt * (ns / max(s, 1e-9)), s > 1e-9);
+      vn.x = vt2.x; vn.z = vt2.y;
+    }
+  }
+  // invisible rounded-rect wall at the table edge
+  let hx = S.wallX - WALL_RC;
+  let hz = S.wallZ - WALL_RC;
+  let q = abs(pn.xz) - vec2f(hx, hz);
+  let outside = length(max(q, vec2f(0.0))) + min(max(q.x, q.y), 0.0) - WALL_RC;
+  if (outside > 0.0) {
+    var gdir = vec2f(0.0);
+    if (q.x > 0.0 && q.y > 0.0) { gdir = normalize(q); }
+    else if (q.x > q.y) { gdir = vec2f(1.0, 0.0); }
+    else { gdir = vec2f(0.0, 1.0); }
+    gdir *= sign(pn.xz) + select(vec2f(0.0), vec2f(1.0), pn.xz == vec2f(0.0));
+    pn = vec3f(pn.x - gdir.x * outside, pn.y, pn.z - gdir.y * outside);
+    let vin = dot(vn.xz, gdir);
+    if (vin > 0.0) { vn = vec3f(vn.x - gdir.x * vin, vn.y, vn.z - gdir.y * vin); }
+  }
+  if (pn.y > 14.0) { pn.y = 14.0; vn.y = min(vn.y, 0.0); }
+
+  stOut[i] = PState(vec4f(pn, st.pos.w), vec4f(vn, 0.0));
+}
+`;
+
+const WGSL_SKIN = /* wgsl */`
+struct SkinU { numV: u32, fdt: f32, gravity: f32, pad: f32, };
+struct PState { pos: vec4f, vel: vec4f, };
+struct Vtx { pos: vec4f, nrm: vec4f, fur: vec4f, };
+struct FurS { o: vec4f, ov: vec4f, pv: vec4f, };
+@group(0) @binding(0) var<uniform> U: SkinU;
+@group(0) @binding(1) var<storage, read> st: array<PState>;
+@group(0) @binding(2) var<storage, read> sw: array<vec4f>;
+@group(0) @binding(3) var<storage, read_write> vtx: array<Vtx>;
+@group(0) @binding(4) var<storage, read_write> fur: array<FurS>;
+
+@compute @workgroup_size(64)
+fn skin(@builtin(global_invocation_id) gid: vec3u) {
+  let i = gid.x;
+  if (i >= U.numV) { return; }
+  var p = vec3f(0.0);
+  var t1 = vec3f(0.0);
+  var t2 = vec3f(0.0);
+  var vel = vec3f(0.0);
+  for (var k = 0u; k < ${KSKIN}u; k++) {
+    let e = sw[i * ${KSKIN}u + k];
+    let s = st[bitcast<u32>(e.w)];
+    p += e.x * s.pos.xyz;
+    t1 += e.y * s.pos.xyz;
+    t2 += e.z * s.pos.xyz;
+    vel += e.x * s.vel.xyz;
+  }
+  var n = cross(t1, t2);
+  let nl = length(n);
+  n = select(vec3f(0.0, 1.0, 0.0), n / max(nl, 1e-12), nl > 1e-12);
+
+  // secondary fur dynamics: a damped spring per vertex, driven by gravity,
+  // surface acceleration and surface velocity (tangential components only).
+  let fs = fur[i];
+  let dt = U.fdt;
+  let acc = (vel - fs.pv.xyz) / dt;
+  let g = vec3f(0.0, -U.gravity / 16.0, 0.0);
+  let gT = g - n * dot(n, g);
+  let aT = acc - n * dot(n, acc);
+  let vT = vel - n * dot(n, vel);
+  var tgt = gT * 0.42 - aT * 0.0045 - vT * 0.035;
+  let tl = length(tgt);
+  if (tl > 1.1) { tgt *= 1.1 / tl; }
+  let ov = fs.ov.xyz + ((tgt - fs.o.xyz) * 240.0 - fs.ov.xyz * 13.0) * dt;
+  var o = fs.o.xyz + ov * dt;
+  o -= n * dot(n, o);
+  let ol = length(o);
+  if (ol > 1.25) { o *= 1.25 / ol; }
+  fur[i] = FurS(vec4f(o, 0.0), vec4f(ov, 0.0), vec4f(vel, 0.0));
+  vtx[i] = Vtx(vec4f(p, 1.0), vec4f(n, length(vel)), vec4f(o, 0.0));
+}
+`;
+
+const WGSL_COMMON = /* wgsl */`
+struct Frame {
+  viewProj: mat4x4f,
+  invViewProj: mat4x4f,
+  lightVP: mat4x4f,
+  topVP: mat4x4f,
+  camPos: vec4f,
+  lightDir: vec4f,
+  fur: vec4f,       // length, density, clumping, shells
+  misc: vec4f,      // time, gravity scale, lattice, eyeBase
+  res: vec4f,
+  camRight: vec4f,
+  camUp: vec4f,
+  extra: vec4f,     // numV
+};
+struct Vtx { pos: vec4f, nrm: vec4f, fur: vec4f, };
+struct VStatic { rest: vec4f, attr: vec4f, };
+struct PState { pos: vec4f, vel: vec4f, };
+
+const SM_SIZE: f32 = ${SM_SIZE}.0;
+const TOP_SIZE: f32 = ${TOP_SIZE}.0;
+const TOP_Y: f32 = ${TOP_Y}.0;
+const TOP_NEAR: f32 = ${TOP_NEAR};
+const TOP_FAR: f32 = ${TOP_FAR}.0;
+const KEY_COL: vec3f = vec3f(1.0, 0.93, 0.84) * 2.5;
+const RIM_COL: vec3f = vec3f(0.72, 0.80, 1.0) * 1.1;
+
+var<private> PD: array<vec2f, 16> = array<vec2f, 16>(
+  vec2f(-0.94201624, -0.39906216), vec2f(0.94558609, -0.76890725), vec2f(-0.094184101, -0.92938870), vec2f(0.34495938, 0.29387760),
+  vec2f(-0.91588581, 0.45771432), vec2f(-0.81544232, -0.87912464), vec2f(-0.38277543, 0.27676845), vec2f(0.97484398, 0.75648379),
+  vec2f(0.44323325, -0.97511554), vec2f(0.53742981, -0.47373420), vec2f(-0.26496911, -0.41893023), vec2f(0.79197514, 0.19090188),
+  vec2f(-0.24188840, 0.99706507), vec2f(-0.81409955, 0.91437590), vec2f(0.19984126, 0.78641367), vec2f(0.14383161, -0.14100790));
+
+fn ambient(n: vec3f) -> vec3f {
+  return mix(vec3f(0.30, 0.25, 0.22), vec3f(0.50, 0.52, 0.62), clamp(n.y * 0.5 + 0.5, 0.0, 1.0));
+}
+
+// soft shadows: blocker search + variable-width PCF (PCSS)
+fn shadowAt(world: vec3f) -> f32 {
+  let c = F.lightVP * vec4f(world, 1.0);
+  let uv = c.xy * vec2f(0.5, -0.5) + vec2f(0.5);
+  let z = c.z - 0.0007;
+  if (uv.x <= 0.002 || uv.y <= 0.002 || uv.x >= 0.998 || uv.y >= 0.998 || z >= 1.0) { return 1.0; }
+  var bsum = 0.0;
+  var bcnt = 0.0;
+  let sr = 20.0 / SM_SIZE;
+  for (var i = 0u; i < 12u; i++) {
+    let suv = clamp(uv + PD[i] * sr, vec2f(0.0), vec2f(0.9999));
+    let d = textureLoad(shadowTex, vec2i(suv * SM_SIZE), 0);
+    if (d < z) { bsum += d; bcnt += 1.0; }
+  }
+  if (bcnt < 0.5) { return 1.0; }
+  let zb = bsum / bcnt;
+  let pen = clamp((z - zb) * 0.40, 1.3 / SM_SIZE, 24.0 / SM_SIZE);
+  var s = 0.0;
+  for (var i = 0u; i < 16u; i++) {
+    s += textureSampleCompareLevel(shadowTex, shadowSamp, uv + PD[i] * pen, z);
+  }
+  return s / 16.0;
+}
+
+fn topHeight(xz: vec2f) -> f32 {
+  let c = F.topVP * vec4f(xz.x, 0.0, xz.y, 1.0);
+  let uv = c.xy * vec2f(0.5, -0.5) + vec2f(0.5);
+  let px = clamp(vec2i(uv * TOP_SIZE), vec2i(0), vec2i(i32(TOP_SIZE) - 1));
+  let d = textureLoad(topTex, px, 0);
+  return TOP_Y - (TOP_NEAR + d * (TOP_FAR - TOP_NEAR));
+}
+
+// sky occlusion from the top-down height map (cheap horizon-style AO)
+fn skyOcc(p: vec3f, n: vec3f, radius: f32) -> f32 {
+  var occ = 0.0;
+  var ws = 0.0;
+  for (var i = 0u; i < 16u; i++) {
+    let o = PD[i] * radius;
+    let h = topHeight(p.xz + o) - p.y;
+    let w = max(dot(normalize(vec3f(o.x, 0.35 * radius, o.y)), n), 0.0) + 0.02;
+    occ += w * clamp(h / (length(o) * 1.3 + 0.08), 0.0, 1.0);
+    ws += w;
+  }
+  return 1.0 - 0.85 * occ / ws;
+}
+`;
+
+const WGSL_VSHADOW = WGSL_COMMON.replace('struct Vtx', `
+@group(0) @binding(0) var<uniform> F: Frame;
+@group(0) @binding(1) var<storage, read> vtx: array<Vtx>;
+@group(0) @binding(2) var shadowTex: texture_depth_2d;
+@group(0) @binding(3) var shadowSamp: sampler_comparison;
+@group(0) @binding(4) var topTex: texture_depth_2d;
+@group(0) @binding(5) var<storage, read_write> vsh: array<vec2f>;
+struct Vtx`) + /* wgsl */`
+@compute @workgroup_size(64)
+fn vshadow(@builtin(global_invocation_id) gid: vec3u) {
+  let i = gid.x;
+  if (i >= u32(F.extra.x)) { return; }
+  let v = vtx[i];
+  let n = v.nrm.xyz;
+  let s = shadowAt(v.pos.xyz + n * (F.fur.x * 0.6 + 0.035));
+  let ao = skyOcc(v.pos.xyz + n * (0.05 + F.fur.x * 0.5), n, 0.55);
+  let ground = 1.0 - (1.0 - smoothstep(0.0, 0.32, v.pos.y)) * clamp(0.3 - n.y * 0.7, 0.0, 1.0) * 0.55;
+  vsh[i] = vec2f(s, ao * ground);
+}
+`;
+
+const WGSL_RENDER = WGSL_COMMON.replace('struct Vtx', `
+@group(0) @binding(0) var<uniform> F: Frame;
+@group(0) @binding(1) var<storage, read> vtx: array<Vtx>;
+@group(0) @binding(2) var<storage, read> vst: array<VStatic>;
+@group(0) @binding(3) var<storage, read> vsh: array<vec2f>;
+@group(0) @binding(4) var shadowTex: texture_depth_2d;
+@group(0) @binding(5) var shadowSamp: sampler_comparison;
+@group(0) @binding(6) var topTex: texture_depth_2d;
+@group(0) @binding(7) var<storage, read> pstate: array<PState>;
+@group(0) @binding(8) var<storage, read> pairs: array<vec4u>;
+struct Vtx`) + /* wgsl */`
+const LAV: vec3f = vec3f(0.40, 0.29, 0.80);
+const UNDER: vec3f = vec3f(0.86, 0.60, 0.84);
+const CHEEK: vec3f = vec3f(0.98, 0.34, 0.50);
+const THREAD: vec3f = vec3f(0.050, 0.020, 0.070);
+const EYE_AZ: f32 = ${EYE_AZ};
+const EYE_EL: f32 = ${EYE_EL};
+const EYE_R: f32 = ${EYE_R};
+const PI: f32 = 3.14159265;
+
+fn hash11(x: f32) -> f32 { return fract(sin(x * 127.1 + 11.7) * 43758.5453); }
+fn hash21(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453); }
+fn vnoise(p: vec2f) -> f32 {
+  let i = floor(p);
+  let f = fract(p);
+  let u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash21(i), hash21(i + vec2f(1.0, 0.0)), u.x), mix(hash21(i + vec2f(0.0, 1.0)), hash21(i + vec2f(1.0, 1.0)), u.x), u.y);
+}
+fn pcg3d(v0: vec3u) -> vec3u {
+  var v = v0 * 1664525u + 1013904223u;
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  v = v ^ (v >> vec3u(16u));
+  v.x += v.y * v.z; v.y += v.z * v.x; v.z += v.x * v.y;
+  return v;
+}
+// nearest jittered feature point (2x2x2 cell search); w = per-feature random
+fn nearestFeature(p: vec3f) -> vec4f {
+  let fl = floor(p);
+  let fr = p - fl;
+  let c0 = vec3i(fl) + select(vec3i(-1), vec3i(0), fr >= vec3f(0.5));
+  var best = 1e9;
+  var bp = vec3f(0.0);
+  var bh = 0.0;
+  for (var i = 0; i < 8; i++) {
+    let c = c0 + vec3i(i & 1, (i >> 1) & 1, (i >> 2) & 1);
+    let hv = vec3f(pcg3d(bitcast<vec3u>(c))) * (1.0 / 4294967295.0);
+    let fp = vec3f(c) + vec3f(0.12) + hv * 0.76;
+    let d = p - fp;
+    let d2 = dot(d, d);
+    if (d2 < best) { best = d2; bp = fp; bh = fract(dot(hv, vec3f(13.37, 7.71, 3.13))); }
+  }
+  return vec4f(bp, bh);
+}
+
+fn eyeDist(fc: vec2f) -> f32 { return length(vec2f(abs(fc.x) - EYE_AZ, fc.y - EYE_EL)); }
+
+// embroidered cheeks (satin stitch) and stitched smile (backstitch), in face angle space
+fn embroidery(fc: vec2f) -> vec4f {
+  var col = vec3f(0.0);
+  var m = 0.0;
+  if (abs(fc.x) > 0.85 || fc.y > 0.0 || fc.y < -0.45) { return vec4f(col, m); }
+  let ax = abs(fc.x);
+  // cheeks
+  let c = vec2f(ax - 0.585, fc.y + 0.25);
+  let ca = 0.2;
+  let cr = vec2f(c.x * cos(ca) + c.y * sin(ca), -c.x * sin(ca) + c.y * cos(ca));
+  let e = length(cr / vec2f(0.125, 0.080));
+  let wob = 0.03 * sin(atan2(cr.y, cr.x) * 7.0 + 1.3);
+  let cm = 1.0 - smoothstep(0.93 + wob, 1.0 + wob, e);
+  if (cm > 0.0) {
+    let w = dot(vec2f(ax, fc.y), vec2f(0.8, 0.6)) * 230.0;
+    let fw = fract(w);
+    let thread = 0.68 + 0.32 * sqrt(max(1.0 - (2.0 * fw - 1.0) * (2.0 * fw - 1.0), 0.0));
+    let tv = 0.9 + 0.1 * hash11(floor(w));
+    col = CHEEK * thread * tv * (0.9 + 0.1 * smoothstep(1.0, 0.6, e));
+    m = cm;
+  }
+  // smile
+  let sw = 0.11;
+  let sy = -0.25;
+  let sd = 0.06;
+  let x = clamp(fc.x, -sw, sw);
+  let yc = sy - sd * (1.0 - (x / sw) * (x / sw));
+  let slope = sd * 2.0 * x / (sw * sw);
+  var dd = abs(fc.y - yc) / sqrt(1.0 + slope * slope);
+  if (abs(fc.x) > sw) { dd = length(vec2f(abs(fc.x) - sw, fc.y - sy)); }
+  let sp = (x + sw) / (2.0 * sw) * 6.0;
+  let fs = fract(sp);
+  let thick = 0.0135 * (1.0 - 0.6 * pow(abs(2.0 * fs - 1.0), 6.0));
+  let sm = 1.0 - smoothstep(thick * 0.7, thick, dd);
+  if (sm > 0.0) {
+    let across = clamp(dd / thick, 0.0, 1.0);
+    let sh = 0.45 + 0.55 * sqrt(1.0 - across * across);
+    let along = 0.8 + 0.2 * sin(fs * PI);
+    col = mix(col, THREAD * sh * along * 3.0, sm);
+    m = max(m, sm);
+  }
+  return vec4f(col, m);
+}
+
+fn studioEnv(R: vec3f) -> vec3f {
+  let sky = mix(vec3f(0.42, 0.38, 0.36), vec3f(0.80, 0.82, 0.92), clamp(R.y * 0.6 + 0.5, 0.0, 1.0));
+  // rectangular key softbox
+  let L = F.lightDir.xyz;
+  let Lt = normalize(cross(vec3f(0.0, 1.0, 0.0), L));
+  let Lb = cross(L, Lt);
+  let dl = dot(R, L);
+  let u = dot(R, Lt) / max(dl, 1e-3);
+  let v = dot(R, Lb) / max(dl, 1e-3);
+  let box = (1.0 - smoothstep(0.20, 0.26, abs(u))) * (1.0 - smoothstep(0.28, 0.34, abs(v))) * step(0.0, dl);
+  // thin strip light on the right
+  let L2 = normalize(vec3f(0.85, 0.35, 0.40));
+  let strip = smoothstep(0.985, 0.992, dot(R, L2));
+  return sky * 0.35 + KEY_COL * box * 3.2 + vec3f(0.9, 0.95, 1.0) * strip * 3.0;
+}
+
+// ---------------------------------------------------------------- background
+struct BO { @builtin(position) clip: vec4f, @location(0) ndc: vec2f, };
+@vertex fn vsBg(@builtin(vertex_index) vi: u32) -> BO {
+  let p = vec2f(f32((vi << 1u) & 2u), f32(vi & 2u)) * 2.0 - 1.0;
+  var o: BO;
+  o.clip = vec4f(p, 1.0, 1.0);
+  o.ndc = p;
+  return o;
+}
+// seamless studio sweep, also used to fade the far table into the backdrop
+fn backdrop(ndc: vec2f) -> vec3f {
+  let w = F.invViewProj * vec4f(ndc, 1.0, 1.0);
+  let dir = normalize(w.xyz / w.w - F.camPos.xyz);
+  let t = clamp(dir.y * 1.3 + 0.42, 0.0, 1.0);
+  var c = mix(vec3f(0.70, 0.64, 0.66), vec3f(0.36, 0.37, 0.50), t);
+  let g = ndc - vec2f(0.0, 0.1);
+  c += vec3f(0.11, 0.09, 0.075) * exp(-dot(g, g) * 1.1);
+  return c;
+}
+@fragment fn fsBg(in: BO) -> @location(0) vec4f {
+  return vec4f(backdrop(in.ndc), 1.0);
+}
+
+// ---------------------------------------------------------------- table
+struct TO { @builtin(position) clip: vec4f, @location(0) wpos: vec3f, @location(1) nrm: vec3f, };
+@vertex fn vsTable(@location(0) p: vec3f, @location(1) n: vec3f) -> TO {
+  var o: TO;
+  o.clip = F.viewProj * vec4f(p, 1.0);
+  o.wpos = p;
+  o.nrm = n;
+  return o;
+}
+@fragment fn fsTable(in: TO) -> @location(0) vec4f {
+  let P = in.wpos;
+  let uv = P.xz * 30.0;
+  let fw = max(fwidth(uv.x), fwidth(uv.y));
+  let N = normalize(in.nrm);
+  let V = normalize(F.camPos.xyz - P);
+  // linen weave: alternating warp / weft
+  let cell = floor(uv);
+  let checker = f32((i32(cell.x) + i32(cell.y)) & 1);
+  let warp = 0.5 + 0.5 * cos(fract(uv.x) * 2.0 * PI);
+  let weft = 0.5 + 0.5 * cos(fract(uv.y) * 2.0 * PI);
+  let weave = mix(warp, weft, checker);
+  let slub = vnoise(vec2f(P.x * 3.0, P.z * 55.0)) * 0.5 + vnoise(vec2f(P.x * 55.0, P.z * 3.0)) * 0.5;
+  let weaveFade = 1.0 - smoothstep(0.25, 0.7, fw);
+  let tex = 1.0 + weaveFade * (0.07 * (weave - 0.5) + 0.06 * (slub - 0.5)) + 0.03 * (vnoise(P.xz * 2.5) - 0.5);
+  var alb = vec3f(0.70, 0.61, 0.55) * tex;
+  let L = F.lightDir.xyz;
+  var sh = 1.0;
+  var ao = 1.0;
+  if (P.y > -0.05) {
+    sh = shadowAt(P + N * 0.01);
+    ao = skyOcc(P + vec3f(0.0, 0.02, 0.0), N, 0.6);
+  }
+  let spot = 1.0 - 0.3 * smoothstep(1.5, 7.0, length(P.xz));
+  let diff = max(dot(N, L), 0.0) * sh * spot;
+  let sheen = pow(1.0 - max(dot(N, V), 0.0), 4.0) * 0.16;
+  var col = alb * (KEY_COL * diff * 0.82 + ambient(N) * ao * 0.95) + vec3f(sheen) * ao;
+  // fade the far table into the studio backdrop so there is no visible horizon
+  let ndc = vec2f(in.clip.x * F.res.z * 2.0 - 1.0, 1.0 - in.clip.y * F.res.w * 2.0);
+  let fade = smoothstep(0.64, 0.93, length(P.xz / vec2f(${TABLE_HX.toFixed(2)}, ${TABLE_HZ.toFixed(2)})));
+  col = mix(col, backdrop(ndc), fade);
+  return vec4f(col, 1.0);
+}
+
+// ---------------------------------------------------------------- octopus surface (base + fur shells)
+struct SO {
+  @builtin(position) clip: vec4f,
+  @location(0) wpos: vec3f,
+  @location(1) nrm: vec3f,
+  @location(2) rest: vec3f,
+  @location(3) attr: vec4f,
+  @location(4) sh: vec2f,
+  @location(5) tang: vec3f,
+  @location(6) h: f32,
+  @location(7) @interpolate(flat) part: u32,
+};
+fn surfOut(vi: u32, h: f32) -> SO {
+  let v = vtx[vi];
+  let s = vst[vi];
+  let n = v.nrm.xyz;
+  let len = F.fur.x * s.attr.w;
+  let off = v.fur.xyz;
+  let wp = v.pos.xyz + n * (len * h + 0.002) + off * (len * h * h);
+  var o: SO;
+  o.clip = F.viewProj * vec4f(wp, 1.0);
+  o.wpos = wp;
+  o.nrm = n;
+  o.rest = s.rest.xyz;
+  o.attr = s.attr;
+  o.sh = vsh[vi];
+  o.tang = n * len + off * (2.0 * len * h);
+  o.h = h;
+  o.part = u32(s.rest.w + 0.5);
+  return o;
+}
+@vertex fn vsBody(@builtin(vertex_index) vi: u32) -> SO { return surfOut(vi, 0.0); }
+@vertex fn vsFur(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> SO {
+  return surfOut(vi, (f32(ii) + 1.0) / F.fur.w);
+}
+
+fn albedoOf(part: u32, attr: vec4f) -> vec3f {
+  if (part == 0u) { return LAV; }
+  return mix(LAV, UNDER, attr.z);
+}
+
+@fragment fn fsBody(in: SO) -> @location(0) vec4f {
+  let N = normalize(in.nrm);
+  let V = normalize(F.camPos.xyz - in.wpos);
+  let L = F.lightDir.xyz;
+  let furAmt = clamp(F.fur.x / 0.09, 0.0, 1.0) * in.attr.w;
+  var base = albedoOf(in.part, in.attr) * mix(1.0, 0.5, furAmt);
+  var gloss = 0.0;
+  if (in.part == 0u) {
+    let em = embroidery(in.attr.xy);
+    base = mix(base, em.rgb, em.a);
+    gloss = em.a;
+    let ed = eyeDist(in.attr.xy);
+    base *= mix(0.45, 1.0, smoothstep(EYE_R * 0.85, EYE_R * 1.35, ed));
+  }
+  let wrap = clamp((dot(N, L) + 0.35) / 1.35, 0.0, 1.0);
+  let rimL = normalize(vec3f(0.55, 0.45, -0.75));
+  let rim = pow(1.0 - max(dot(N, V), 0.0), 3.0) * max(dot(N, rimL) + 0.3, 0.0);
+  var col = base * (KEY_COL * wrap * in.sh.x + ambient(N) * in.sh.y) + base * RIM_COL * rim * 0.6;
+  let H = normalize(L + V);
+  col += gloss * pow(max(dot(N, H), 0.0), 36.0) * 0.22 * KEY_COL * in.sh.x;
+  return vec4f(col, 1.0);
+}
+
+const STRAND_FREQ: f32 = 50.0;
+const CLUMP_RATIO: f32 = 4.5;
+@fragment fn fsFur(in: SO) -> @location(0) vec4f {
+  let h = in.h;
+  if (in.part == 0u) {
+    if (eyeDist(in.attr.xy) < EYE_R * 1.06) { discard; }
+    let em = embroidery(in.attr.xy);
+    if (em.a > 0.3 && h > 0.12) { discard; }
+  }
+  // clumping: sample positions are pulled toward the nearest clump centre with height
+  let q = in.rest * (STRAND_FREQ * F.fur.y);
+  let cf = nearestFeature(q * (1.0 / CLUMP_RATIO));
+  let cc = cf.xyz * CLUMP_RATIO;
+  let tcl = clamp(F.fur.z * pow(h, 1.2) * 0.85, 0.0, 0.85);
+  let qs = cc + (q - cc) / (1.0 - tcl);
+  let sf = nearestFeature(qs);
+  let strandLen = 0.7 + 0.3 * sf.w;
+  let hn = h / strandLen;
+  if (hn > 1.0) { discard; }
+  let d = length(qs - sf.xyz) * (1.0 - tcl);
+  let rad = mix(0.58, 0.16, pow(hn, 1.4));
+  let alpha = 1.0 - smoothstep(rad * 0.45, rad, d);
+  if (alpha < 0.04) { discard; }
+
+  let N = normalize(in.nrm);
+  let tl = length(in.tang);
+  let T = select(N, in.tang / max(tl, 1e-6), tl > 1e-6);
+  let V = normalize(F.camPos.xyz - in.wpos);
+  let L = F.lightDir.xyz;
+  let TL = dot(T, L);
+  let kk = sqrt(max(1.0 - TL * TL, 0.0));
+  let wrap = clamp((dot(N, L) + 0.5) / 1.5, 0.0, 1.0);
+  let diff = wrap * mix(0.7, 1.0, kk);
+  let Hh = normalize(L + V);
+  let TH = dot(T, Hh);
+  let spec = pow(sqrt(max(1.0 - TH * TH, 0.0)), 50.0) * 0.07 * h;
+  let layerAO = mix(0.36, 1.0, pow(h, 0.7));
+  let tint = 0.86 + 0.28 * sf.w + 0.08 * (cf.w - 0.5);
+  let alb = albedoOf(in.part, in.attr) * tint * mix(1.0, 1.07, h);
+  var col = alb * (KEY_COL * diff * in.sh.x + ambient(N) * in.sh.y) * layerAO;
+  col += spec * KEY_COL * in.sh.x;
+  let rimL = normalize(vec3f(0.55, 0.45, -0.75));
+  let fres = pow(1.0 - abs(dot(N, V)), 2.5);
+  col += alb * RIM_COL * fres * clamp(dot(T, rimL) * 0.5 + 0.6, 0.0, 1.0) * h * 0.55;
+  return vec4f(col, alpha);
+}
+
+// ---------------------------------------------------------------- safety-bead eyes
+struct EO { @builtin(position) clip: vec4f, @location(0) wpos: vec3f, @location(1) nrm: vec3f, @location(2) sh: vec2f, };
+@vertex fn vsEye(@location(0) lp: vec3f, @builtin(instance_index) ii: u32) -> EO {
+  let base = u32(F.misc.w);
+  let a = vtx[base + ii];
+  let N = a.nrm.xyz;
+  var T = cross(vec3f(0.0, 1.0, 0.0), N);
+  if (length(T) < 1e-4) { T = vec3f(1.0, 0.0, 0.0); }
+  T = normalize(T);
+  let B = cross(N, T);
+  let lift = 0.02 + F.fur.x * 0.15;
+  let wp = a.pos.xyz + N * lift + (T * lp.x + B * lp.y + N * (lp.z * 0.8)) * EYE_R;
+  let ln = normalize(vec3f(lp.x, lp.y, lp.z / 0.8));
+  var o: EO;
+  o.clip = F.viewProj * vec4f(wp, 1.0);
+  o.wpos = wp;
+  o.nrm = normalize(T * ln.x + B * ln.y + N * ln.z);
+  o.sh = vsh[base + ii];
+  return o;
+}
+@fragment fn fsEye(in: EO) -> @location(0) vec4f {
+  let N = normalize(in.nrm);
+  let V = normalize(F.camPos.xyz - in.wpos);
+  let L = F.lightDir.xyz;
+  let H = normalize(L + V);
+  let NdV = max(dot(N, V), 0.0);
+  let fres = 0.05 + 0.95 * pow(1.0 - NdV, 5.0);
+  let R = reflect(-V, N);
+  let a2 = 0.004;
+  let NdH = max(dot(N, H), 0.0);
+  let dd = NdH * NdH * (a2 - 1.0) + 1.0;
+  let spec = a2 / (PI * dd * dd) * max(dot(N, L), 0.0) * 0.12 * in.sh.x;
+  var c = vec3f(0.010, 0.008, 0.014) * (ambient(N) + KEY_COL * max(dot(N, L), 0.0) * in.sh.x);
+  c += studioEnv(R) * fres * mix(0.7, 1.0, in.sh.y) + KEY_COL * min(spec, 12.0);
+  return vec4f(c, 1.0);
+}
+
+// ---------------------------------------------------------------- physics lattice overlay
+struct LO { @builtin(position) clip: vec4f, @location(0) col: vec4f, };
+@vertex fn vsLine(@builtin(vertex_index) vi: u32) -> LO {
+  let pr = pairs[vi / 2u];
+  let a = pstate[pr.x].pos.xyz;
+  let b = pstate[pr.y].pos.xyz;
+  let p = select(a, b, (vi & 1u) == 1u);
+  let strain = distance(a, b) / bitcast<f32>(pr.z) - 1.0;
+  let s = clamp(strain * 5.0, -1.0, 1.0);
+  var col = vec3f(0.55, 0.95, 0.85);
+  col = mix(col, vec3f(1.0, 0.35, 0.30), max(s, 0.0));
+  col = mix(col, vec3f(0.35, 0.50, 1.0), max(-s, 0.0));
+  var o: LO;
+  o.clip = F.viewProj * vec4f(p, 1.0);
+  o.col = vec4f(col, 0.13);
+  return o;
+}
+@fragment fn fsLine(in: LO) -> @location(0) vec4f { return vec4f(in.col.rgb * in.col.a, in.col.a); }
+
+@vertex fn vsNode(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> LO {
+  var corners = array<vec2f, 6>(vec2f(-1.0, -1.0), vec2f(1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, -1.0), vec2f(1.0, 1.0), vec2f(-1.0, 1.0));
+  let c = corners[vi];
+  let ps = pstate[ii];
+  let kind = u32(ps.pos.w + 0.5);
+  let size = select(0.02, 0.032, kind == 2u || kind == 3u);
+  let wp = ps.pos.xyz + (F.camRight.xyz * c.x + F.camUp.xyz * c.y) * size;
+  var col = vec3f(1.0, 0.85, 0.35);
+  if (kind == 1u || kind == 2u) { col = vec3f(1.0, 0.55, 0.75); }
+  if (kind == 3u) { col = vec3f(0.45, 0.95, 1.0); }
+  var o: LO;
+  o.clip = F.viewProj * vec4f(wp, 1.0);
+  o.col = vec4f(col, 1.0 - smoothstep(0.6, 1.0, length(c)));
+  return o;
+}
+`;
+
+const WGSL_DEPTH = /* wgsl */`
+struct DU { vp: mat4x4f, p: vec4f, };
+struct Vtx { pos: vec4f, nrm: vec4f, fur: vec4f, };
+struct VStatic { rest: vec4f, attr: vec4f, };
+@group(0) @binding(0) var<uniform> U: DU;
+@group(0) @binding(1) var<storage, read> vtx: array<Vtx>;
+@group(0) @binding(2) var<storage, read> vst: array<VStatic>;
+@vertex fn vsDepth(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
+  let v = vtx[vi];
+  let len = U.p.x * vst[vi].attr.w;
+  return U.vp * vec4f(v.pos.xyz + v.nrm.xyz * (len * 0.6), 1.0);
+}
+`;
+
+const WGSL_POST = /* wgsl */`
+@group(0) @binding(0) var hdr: texture_2d<f32>;
+@group(0) @binding(1) var<uniform> R: vec4f; // w, h, time, exposure
+@vertex fn vsPost(@builtin(vertex_index) vi: u32) -> @builtin(position) vec4f {
+  let p = vec2f(f32((vi << 1u) & 2u), f32(vi & 2u)) * 2.0 - 1.0;
+  return vec4f(p, 0.0, 1.0);
+}
+fn aces(x: vec3f) -> vec3f {
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), vec3f(0.0), vec3f(1.0));
+}
+fn toSrgb(c: vec3f) -> vec3f {
+  let lo = c * 12.92;
+  let hi = 1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055;
+  return select(hi, lo, c <= vec3f(0.0031308));
+}
+@fragment fn fsPost(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let c = textureLoad(hdr, vec2i(fc.xy), 0).rgb;
+  var x = aces(c * R.w);
+  let uv = fc.xy / R.xy;
+  let q = uv - 0.5;
+  let vig = 1.0 - 0.32 * smoothstep(0.25, 0.95, length(q * vec2f(R.x / R.y, 1.0) * 0.9));
+  x *= vig;
+  var s = toSrgb(x);
+  let n = fract(sin(dot(fc.xy + R.z, vec2f(12.9898, 78.233))) * 43758.5453);
+  s += (n - 0.5) / 255.0;
+  return vec4f(s, 1.0);
+}
+`;
+
+// ==================================================================== UI
+const CONTROLS = {
+  physics: [
+    { key: 'gravity', label: 'Gravity', min: 0, max: 25, step: 0.1, value: 10, fmt: (v) => v.toFixed(1) + ' m/s²' },
+    { key: 'stiffness', label: 'Stiffness', min: 0.25, max: 2, step: 0.01, value: 1, fmt: (v) => v.toFixed(2) + '×' },
+    { key: 'damping', label: 'Damping', min: 0, max: 1, step: 0.01, value: 0.35, fmt: (v) => Math.round(v * 100) + '%' },
+    { key: 'floppiness', label: 'Tentacle Floppiness', min: 0, max: 1, step: 0.01, value: 0.6, fmt: (v) => Math.round(v * 100) + '%' },
+  ],
+  fur: [
+    { key: 'furLength', label: 'Length', min: 0, max: 0.16, step: 0.002, value: 0.062, fmt: (v) => (v * 120).toFixed(1) + ' mm' },
+    { key: 'furDensity', label: 'Density', min: 0.4, max: 1.8, step: 0.01, value: 1, fmt: (v) => Math.round(v * 100) + '%' },
+    { key: 'furClump', label: 'Clumping', min: 0, max: 1, step: 0.01, value: 0.45, fmt: (v) => Math.round(v * 100) + '%' },
+  ],
+  env: [
+    { key: 'friction', label: 'Table Friction', min: 0, max: 1.5, step: 0.01, value: 0.7, fmt: (v) => 'μ ' + v.toFixed(2) },
+  ],
+};
+const params = {};
+const sliders = {};
+function buildUI() {
+  for (const [grp, list] of Object.entries(CONTROLS)) {
+    const host = $('grp-' + grp);
+    for (const c of list) {
+      params[c.key] = c.value;
+      const wrap = document.createElement('div');
+      wrap.className = 'ctl';
+      const id = 'sl-' + c.key;
+      wrap.innerHTML = `<div class="lab"><span><label for="${id}">${c.label}</label></span><output for="${id}"></output></div>
+        <input type="range" id="${id}" min="${c.min}" max="${c.max}" step="${c.step}" value="${c.value}">`;
+      host.appendChild(wrap);
+      const input = wrap.querySelector('input'), out = wrap.querySelector('output');
+      const sync = () => {
+        const v = parseFloat(input.value);
+        params[c.key] = v;
+        out.textContent = c.fmt(v);
+        input.style.setProperty('--p', ((v - c.min) / (c.max - c.min) * 100).toFixed(2) + '%');
+      };
+      input.addEventListener('input', sync);
+      sliders[c.key] = { input, sync, def: c.value };
+      sync();
+    }
+  }
+  $('defaults').addEventListener('click', () => {
+    for (const s of Object.values(sliders)) { s.input.value = s.def; s.sync(); }
+  });
+}
+
+function showError(msg, detail) {
+  $('error').hidden = false;
+  if (msg) $('errorMsg').textContent = msg;
+  if (detail) { $('errorDetail').hidden = false; $('errorDetail').textContent = detail; }
+  console.error(msg, detail || '');
+}
+
+// ==================================================================== main
+async function main() {
+  buildUI();
+  if (!navigator.gpu) {
+    showError('This browser does not expose WebGPU. Try a recent Chrome, Edge or Safari, or enable WebGPU in your browser flags.');
+    return;
+  }
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+  if (!adapter) { showError('No suitable GPU adapter was found for WebGPU.'); return; }
+  const hasTS = adapter.features.has('timestamp-query');
+  const device = await adapter.requestDevice({ requiredFeatures: hasTS ? ['timestamp-query'] : [] });
+  device.lost.then((info) => { if (info.reason !== 'destroyed') showError('The GPU device was lost.', info.message); });
+  device.addEventListener('uncapturederror', (e) => console.error('WebGPU:', e.error.message));
+  const ai = adapter.info || {};
+  $('tAdapter').textContent = [ai.vendor, ai.architecture || ai.description].filter(Boolean).join(' · ') || 'WebGPU adapter';
+  $('tAdapter').title = $('tAdapter').textContent;
+
+  const canvas = $('gpu');
+  const context = canvas.getContext('webgpu');
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  context.configure({ device, format, alphaMode: 'opaque' });
+
+  // ---------------- build CPU-side data
+  const model = buildModel();
+  const mesh = buildRenderMesh(model);
+  const table = buildTable();
+  const sphere = buildSphere(32, 20);
+
+  // ---------------- buffers
+  const BU = GPUBufferUsage;
+  const mkBuf = (data, usage, label) => {
+    const buf = device.createBuffer({ label, size: Math.max(16, Math.ceil(data.byteLength / 4) * 4), usage, mappedAtCreation: true });
+    new Uint8Array(buf.getMappedRange()).set(new Uint8Array(data.buffer || data, data.byteOffset || 0, data.byteLength));
+    buf.unmap();
+    return buf;
+  };
+  const mkEmpty = (size, usage, label) => device.createBuffer({ label, size: Math.max(16, size), usage });
+
+  const N = model.N, V = mesh.V;
+  const stateA = mkBuf(model.init, BU.STORAGE | BU.COPY_DST | BU.COPY_SRC, 'stateA');
+  const stateB = mkBuf(model.init, BU.STORAGE | BU.COPY_DST | BU.COPY_SRC, 'stateB');
+  const pstBuf = mkBuf(new Uint8Array(model.pstBuf), BU.STORAGE, 'pstatic');
+  const springBuf = mkBuf(new Uint8Array(model.adjBuf), BU.STORAGE, 'springs');
+  const fanBuf = mkBuf(model.fans, BU.STORAGE, 'fans');
+  const triBuf = mkBuf(model.tris, BU.STORAGE, 'tris');
+  const simStateBuf = mkBuf(new Float32Array([model.restVolume, 0, 0, 0]), BU.STORAGE | BU.COPY_DST, 'simState');
+  const simUBuf = mkEmpty(256, BU.UNIFORM | BU.COPY_DST, 'simU');
+  const skinWBuf = mkBuf(mesh.skin, BU.STORAGE, 'skinW');
+  const vtxBuf = mkEmpty(V * 48, BU.STORAGE, 'vtx');
+  const furBuf = mkEmpty(V * 48, BU.STORAGE | BU.COPY_DST, 'furState');
+  const vshBuf = mkEmpty(V * 8, BU.STORAGE, 'vshadow');
+  const vstBuf = mkBuf(mesh.vst, BU.STORAGE, 'vstatic');
+  const idxBuf = mkBuf(mesh.idx, BU.INDEX, 'index');
+  const skinUBuf = mkEmpty(16, BU.UNIFORM | BU.COPY_DST, 'skinU');
+  const frameUBuf = mkEmpty(384, BU.UNIFORM | BU.COPY_DST, 'frameU');
+  const lightUBuf = mkEmpty(80, BU.UNIFORM | BU.COPY_DST, 'lightU');
+  const topUBuf = mkEmpty(80, BU.UNIFORM | BU.COPY_DST, 'topU');
+  const postUBuf = mkEmpty(16, BU.UNIFORM | BU.COPY_DST, 'postU');
+  const pairBuf = mkBuf(model.pairs, BU.STORAGE, 'pairs');
+  const tableVB = mkBuf(table.vb, BU.VERTEX, 'tableVB');
+  const tableIB = mkBuf(table.ib, BU.INDEX, 'tableIB');
+  const eyeVB = mkBuf(sphere.vb, BU.VERTEX, 'eyeVB');
+  const eyeIB = mkBuf(sphere.ib, BU.INDEX, 'eyeIB');
+  const readBuf = mkEmpty(N * 32, BU.MAP_READ | BU.COPY_DST, 'readback');
+
+  // ---------------- textures
+  const shadowTex = device.createTexture({ size: [SM_SIZE, SM_SIZE], format: 'depth32float', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+  const topTex = device.createTexture({ size: [TOP_SIZE, TOP_SIZE], format: 'depth32float', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+  const shadowSamp = device.createSampler({ compare: 'less', magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge' });
+
+  // ---------------- shaders
+  const compile = async (code, label) => {
+    const m = device.createShaderModule({ code, label });
+    const info = await m.getCompilationInfo();
+    const errs = info.messages.filter((x) => x.type === 'error');
+    if (errs.length) throw Object.assign(new Error(label + ' failed to compile'), { detail: errs.map((e) => `${label}:${e.lineNum}:${e.linePos} ${e.message}`).join('\n') });
+    return m;
+  };
+  const [physMod, skinMod, vshMod, renderMod, depthMod, postMod] = await Promise.all([
+    compile(WGSL_PHYS, 'physics'), compile(WGSL_SKIN, 'skinning'), compile(WGSL_VSHADOW, 'vertex-shadow'),
+    compile(WGSL_RENDER, 'render'), compile(WGSL_DEPTH, 'depth'), compile(WGSL_POST, 'post'),
+  ]);
+
+  // ---------------- layouts
+  const S_C = GPUShaderStage.COMPUTE, S_V = GPUShaderStage.VERTEX, S_F = GPUShaderStage.FRAGMENT;
+  const bgl = (entries, label) => device.createBindGroupLayout({ label, entries: entries.map(([binding, visibility, res]) => ({ binding, visibility, ...res })) });
+  const U_ = { buffer: { type: 'uniform' } }, RO = { buffer: { type: 'read-only-storage' } }, RW = { buffer: { type: 'storage' } };
+  const DT = { texture: { sampleType: 'depth' } }, CMP = { sampler: { type: 'comparison' } };
+
+  const physBGL = bgl([[0, S_C, U_], [1, S_C, RO], [2, S_C, RW], [3, S_C, RO], [4, S_C, RO], [5, S_C, RO], [6, S_C, RW], [7, S_C, RO]], 'physBGL');
+  const skinBGL = bgl([[0, S_C, U_], [1, S_C, RO], [2, S_C, RO], [3, S_C, RW], [4, S_C, RW]], 'skinBGL');
+  const vshBGL = bgl([[0, S_C, U_], [1, S_C, RO], [2, S_C, DT], [3, S_C, CMP], [4, S_C, DT], [5, S_C, RW]], 'vshBGL');
+  const renderBGL = bgl([[0, S_V | S_F, U_], [1, S_V, RO], [2, S_V, RO], [3, S_V, RO], [4, S_F, DT], [5, S_F, CMP],
+                         [6, S_F, DT], [7, S_V, RO], [8, S_V, RO]], 'renderBGL');
+  const depthBGL = bgl([[0, S_V, U_], [1, S_V, RO], [2, S_V, RO]], 'depthBGL');
+  const postBGL = bgl([[0, S_F, { texture: { sampleType: 'unfilterable-float' } }], [1, S_F, U_]], 'postBGL');
+  const pl = (l) => device.createPipelineLayout({ bindGroupLayouts: [l] });
+
+  const physBG = (inBuf, outBuf) => device.createBindGroup({ layout: physBGL, entries: [
+    { binding: 0, resource: { buffer: simUBuf } }, { binding: 1, resource: { buffer: inBuf } }, { binding: 2, resource: { buffer: outBuf } },
+    { binding: 3, resource: { buffer: pstBuf } }, { binding: 4, resource: { buffer: springBuf } }, { binding: 5, resource: { buffer: fanBuf } },
+    { binding: 6, resource: { buffer: simStateBuf } }, { binding: 7, resource: { buffer: triBuf } }] });
+  const bgAB = physBG(stateA, stateB), bgBA = physBG(stateB, stateA);
+  const skinBG = device.createBindGroup({ layout: skinBGL, entries: [
+    { binding: 0, resource: { buffer: skinUBuf } }, { binding: 1, resource: { buffer: stateA } }, { binding: 2, resource: { buffer: skinWBuf } },
+    { binding: 3, resource: { buffer: vtxBuf } }, { binding: 4, resource: { buffer: furBuf } }] });
+  const vshBG = device.createBindGroup({ layout: vshBGL, entries: [
+    { binding: 0, resource: { buffer: frameUBuf } }, { binding: 1, resource: { buffer: vtxBuf } }, { binding: 2, resource: shadowTex.createView() },
+    { binding: 3, resource: shadowSamp }, { binding: 4, resource: topTex.createView() }, { binding: 5, resource: { buffer: vshBuf } }] });
+  const renderBG = device.createBindGroup({ layout: renderBGL, entries: [
+    { binding: 0, resource: { buffer: frameUBuf } }, { binding: 1, resource: { buffer: vtxBuf } }, { binding: 2, resource: { buffer: vstBuf } },
+    { binding: 3, resource: { buffer: vshBuf } }, { binding: 4, resource: shadowTex.createView() }, { binding: 5, resource: shadowSamp },
+    { binding: 6, resource: topTex.createView() }, { binding: 7, resource: { buffer: stateA } }, { binding: 8, resource: { buffer: pairBuf } }] });
+  const depthBG = (ubuf) => device.createBindGroup({ layout: depthBGL, entries: [
+    { binding: 0, resource: { buffer: ubuf } }, { binding: 1, resource: { buffer: vtxBuf } }, { binding: 2, resource: { buffer: vstBuf } }] });
+  const lightBG = depthBG(lightUBuf), topBG = depthBG(topUBuf);
+
+  // ---------------- pipelines
+  const HDR = 'rgba16float';
+  const msaa = { count: MSAA };
+  const depthState = (write = true, compare = 'less') => ({ format: 'depth24plus', depthWriteEnabled: write, depthCompare: compare });
+  const blendPremul = { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } };
+  const rp = (desc) => device.createRenderPipelineAsync({ layout: pl(renderBGL), ...desc });
+  const [volPipe, stepPipe, skinPipe, vshPipe, bgPipe, tablePipe, bodyPipe, furPipe, eyePipe, linePipe, nodePipe, depthPipe, postPipe] = await Promise.all([
+    device.createComputePipelineAsync({ layout: pl(physBGL), compute: { module: physMod, entryPoint: 'volume' } }),
+    device.createComputePipelineAsync({ layout: pl(physBGL), compute: { module: physMod, entryPoint: 'step' } }),
+    device.createComputePipelineAsync({ layout: pl(skinBGL), compute: { module: skinMod, entryPoint: 'skin' } }),
+    device.createComputePipelineAsync({ layout: pl(vshBGL), compute: { module: vshMod, entryPoint: 'vshadow' } }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsBg' }, fragment: { module: renderMod, entryPoint: 'fsBg', targets: [{ format: HDR }] },
+         depthStencil: depthState(false, 'always'), multisample: msaa }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsTable', buffers: [{ arrayStride: 24, attributes: [
+           { shaderLocation: 0, offset: 0, format: 'float32x3' }, { shaderLocation: 1, offset: 12, format: 'float32x3' }] }] },
+         fragment: { module: renderMod, entryPoint: 'fsTable', targets: [{ format: HDR }] },
+         primitive: { cullMode: 'back' }, depthStencil: depthState(), multisample: msaa }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsBody' }, fragment: { module: renderMod, entryPoint: 'fsBody', targets: [{ format: HDR }] },
+         primitive: { cullMode: 'back' }, depthStencil: depthState(), multisample: msaa }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsFur' }, fragment: { module: renderMod, entryPoint: 'fsFur', targets: [{ format: HDR }] },
+         primitive: { cullMode: 'back' }, depthStencil: depthState(), multisample: { count: MSAA, alphaToCoverageEnabled: true } }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsEye', buffers: [{ arrayStride: 12, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] }] },
+         fragment: { module: renderMod, entryPoint: 'fsEye', targets: [{ format: HDR }] },
+         primitive: { cullMode: 'back' }, depthStencil: depthState(), multisample: msaa }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsLine' }, fragment: { module: renderMod, entryPoint: 'fsLine', targets: [{ format: HDR, blend: blendPremul }] },
+         primitive: { topology: 'line-list' }, depthStencil: depthState(false, 'always'), multisample: msaa }),
+    rp({ vertex: { module: renderMod, entryPoint: 'vsNode' }, fragment: { module: renderMod, entryPoint: 'fsLine', targets: [{ format: HDR, blend: blendPremul }] },
+         depthStencil: depthState(false, 'always'), multisample: msaa }),
+    device.createRenderPipelineAsync({ layout: pl(depthBGL), vertex: { module: depthMod, entryPoint: 'vsDepth' },
+         primitive: { cullMode: 'none' }, depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less', depthBias: 2, depthBiasSlopeScale: 2.0 } }),
+    device.createRenderPipelineAsync({ layout: pl(postBGL), vertex: { module: postMod, entryPoint: 'vsPost' },
+         fragment: { module: postMod, entryPoint: 'fsPost', targets: [{ format }] } }),
+  ]);
+
+  // ---------------- timestamp queries (optional)
+  let ts = null;
+  if (hasTS) {
+    const qs = device.createQuerySet({ type: 'timestamp', count: 4 });
+    ts = { qs, resolve: mkEmpty(32, BU.QUERY_RESOLVE | BU.COPY_SRC), read: mkEmpty(32, BU.MAP_READ | BU.COPY_DST), pending: false,
+           compute: 0, render: 0 };
+  }
+
+  // ---------------- size-dependent targets
+  let W = 0, Hh = 0, msaaTex, depthTex, msaaView, depthView, hdrTex, hdrView, postBG;
+  let pixelBudget = 2.8e6;   // lowered automatically if the GPU cannot keep up
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const scale = Math.min(dpr, Math.sqrt(pixelBudget / Math.max(1, r.width * r.height)));
+    const w = Math.max(2, Math.round(r.width * scale)), h = Math.max(2, Math.round(r.height * scale));
+    if (w === W && h === Hh) return;
+    W = w; Hh = h; canvas.width = w; canvas.height = h;
+    msaaTex?.destroy(); depthTex?.destroy();
+    msaaTex = device.createTexture({ size: [w, h], sampleCount: MSAA, format: HDR, usage: GPUTextureUsage.RENDER_ATTACHMENT });
+    depthTex = device.createTexture({ size: [w, h], sampleCount: MSAA, format: 'depth24plus', usage: GPUTextureUsage.RENDER_ATTACHMENT });
+    msaaView = msaaTex.createView();
+    depthView = depthTex.createView();
+    hdrTex?.destroy();
+    hdrTex = device.createTexture({ size: [w, h], format: HDR, usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING });
+    hdrView = hdrTex.createView();
+    postBG = device.createBindGroup({ layout: postBGL, entries: [{ binding: 0, resource: hdrView }, { binding: 1, resource: { buffer: postUBuf } }] });
+  }
+  new ResizeObserver(resize).observe(canvas);
+  resize();
+
+  // ---------------- camera
+  const cam = { theta: 0.18, phi: 0.40, dist: 8.6, target: [0, 0.75, 0], cur: null };
+  cam.cur = { theta: cam.theta, phi: cam.phi, dist: cam.dist };
+  let view, proj, viewProj, invViewProj, camPos;
+  function updateCamera() {
+    const c = cam.cur;
+    camPos = [cam.target[0] + c.dist * Math.cos(c.phi) * Math.sin(c.theta), cam.target[1] + c.dist * Math.sin(c.phi),
+              cam.target[2] + c.dist * Math.cos(c.phi) * Math.cos(c.theta)];
+    view = M4.lookAt(camPos, cam.target, [0, 1, 0]);
+    proj = M4.perspective(36 * Math.PI / 180, W / Hh, 0.1, 60);
+    viewProj = M4.mul(proj, view);
+    invViewProj = M4.invert(viewProj);
+  }
+  const lightView = M4.lookAt(mul3(LIGHT_DIR, 15), [0, 0, 0], [0, 1, 0]);
+  const lightVP = M4.mul(M4.ortho(-7.2, 7.2, -7.2, 7.2, 1, 30), lightView);
+  const topVP = M4.mul(M4.ortho(-7, 7, -7, 7, TOP_NEAR, TOP_FAR), M4.lookAt([0, TOP_Y, 0], [0, 0, 0], [0, 0, -1]));
+
+  // ---------------- interaction
+  const cpu = new Float32Array(model.init);  // latest particle state read back from the GPU
+  let readPending = false;
+  const grab = { idx: -1, planeDist: 0, offset: [0, 0, 0], target: [0, 0, 0], sigma2: 0.08, mouse: [0, 0] };
+  const pointers = new Map();
+  let orbit = null, pinch = null;
+
+  function rayFrom(px, py) {
+    const r = canvas.getBoundingClientRect();
+    const nx = ((px - r.left) / r.width) * 2 - 1, ny = 1 - ((py - r.top) / r.height) * 2;
+    const a = M4.xform(invViewProj, [nx, ny, 0]), b = M4.xform(invViewProj, [nx, ny, 1]);
+    const p0 = [a[0] / a[3], a[1] / a[3], a[2] / a[3]], p1 = [b[0] / b[3], b[1] / b[3], b[2] / b[3]];
+    return { o: p0, d: norm3(sub3(p1, p0)) };
+  }
+  function pick(ray) {
+    let best = Infinity, bi = -1;
+    const fur = params.furLength;
+    for (let i = 0; i < N; i++) {
+      const kind = model.info[i].kind;
+      let R;
+      if (kind === KIND.OUTER) R = 0.15 + fur;
+      else if (kind === KIND.RING) R = Math.max(0.07, 0.42 * model.segR[model.info[i].seg]) + fur;
+      else if (kind === KIND.CENTER) R = model.segR[model.info[i].seg] + fur * 0.6;
+      else continue;
+      const c = [cpu[i * 8], cpu[i * 8 + 1], cpu[i * 8 + 2]];
+      const oc = sub3(c, ray.o);
+      const tc = dot3(oc, ray.d);
+      const d2 = dot3(oc, oc) - tc * tc;
+      if (d2 > R * R) continue;
+      const th = tc - Math.sqrt(R * R - d2);
+      if (th > 0.05 && th < best) { best = th; bi = i; }
+    }
+    if (bi < 0) return null;
+    let gi = bi;
+    const inf = model.info[bi];
+    if (inf.kind === KIND.RING) gi = model.cIdx(inf.group - 1, inf.seg);
+    return { idx: gi, hit: add3(ray.o, mul3(ray.d, best)), group: inf.group };
+  }
+  const camFwd = () => norm3(sub3(cam.target, camPos));
+  function updateGrabTarget(px, py) {
+    const ray = rayFrom(px, py);
+    const F = camFwd();
+    const t = grab.planeDist / Math.max(1e-3, dot3(ray.d, F));
+    grab.target = add3(add3(ray.o, mul3(ray.d, t)), grab.offset);
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.focus();
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pointers.size === 2) { // pinch-zoom on touch
+      if (grab.idx >= 0) grab.idx = -1;
+      orbit = null;
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), dist: cam.dist };
+      return;
+    }
+    const hit = pick(rayFrom(e.clientX, e.clientY));
+    if (hit && e.button !== 2) {
+      grab.idx = hit.idx;
+      grab.sigma2 = hit.group === 0 ? 0.075 : 0.10;
+      const p = [cpu[hit.idx * 8], cpu[hit.idx * 8 + 1], cpu[hit.idx * 8 + 2]];
+      grab.offset = sub3(p, hit.hit);
+      grab.planeDist = dot3(sub3(hit.hit, camPos), camFwd());
+      grab.mouse = [e.clientX, e.clientY];
+      updateGrabTarget(e.clientX, e.clientY);
+      canvas.className = 'grabbing';
+    } else {
+      orbit = { x: e.clientX, y: e.clientY, theta: cam.theta, phi: cam.phi };
+      canvas.className = 'orbiting';
+    }
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      cam.dist = clamp(pinch.dist * pinch.d / Math.max(d, 1), 3.2, 16);
+      return;
+    }
+    if (grab.idx >= 0) { grab.mouse = [e.clientX, e.clientY]; updateGrabTarget(e.clientX, e.clientY); return; }
+    if (orbit) {
+      cam.theta = orbit.theta - (e.clientX - orbit.x) * 0.0065;
+      cam.phi = clamp(orbit.phi + (e.clientY - orbit.y) * 0.005, 0.06, 1.35);
+      return;
+    }
+    canvas.className = pick(rayFrom(e.clientX, e.clientY)) ? 'can-grab' : '';
+  });
+  const endPointer = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
+    if (pointers.size === 0) { grab.idx = -1; orbit = null; canvas.className = ''; }
+  };
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    if (grab.idx >= 0) {
+      grab.planeDist = clamp(grab.planeDist * Math.exp(dy * 0.0006), 1.5, 30);
+      updateGrabTarget(grab.mouse[0], grab.mouse[1]);
+    } else {
+      cam.dist = clamp(cam.dist * Math.exp(dy * 0.0012), 3.2, 16);
+    }
+  }, { passive: false });
+  canvas.addEventListener('dblclick', () => { cam.theta = 0.18; cam.phi = 0.40; cam.dist = 8.6; });
+
+  let showLattice = false;
+  $('lattice').addEventListener('change', (e) => { showLattice = e.target.checked; });
+
+  const zeroFur = new Uint8Array(V * 48);
+  function resetSim() {
+    device.queue.writeBuffer(stateA, 0, model.init);
+    device.queue.writeBuffer(stateB, 0, model.init);
+    device.queue.writeBuffer(furBuf, 0, zeroFur);
+    device.queue.writeBuffer(simStateBuf, 0, new Float32Array([model.restVolume, 0, 0, 0]));
+    cpu.set(model.init);
+    grab.idx = -1;
+  }
+  $('reset').addEventListener('click', resetSim);
+
+  // ---------------- uniforms
+  const simU = new ArrayBuffer(256), simF = new Float32Array(simU), simUi = new Uint32Array(simU), simI = new Int32Array(simU);
+  function writeSimUniform() {
+    const s = params.stiffness, fl = params.floppiness, d = params.damping;
+    const kT = (t, v) => { simF[16 + t] = v * s; };
+    const kC = (t, v) => { simF[28 + t] = v * s; };
+    const both = (t, T, C = T) => { kT(t, T); kC(t, C); };
+    both(ST.HEAD_SHELL, 7000, 3200);
+    both(ST.HEAD_BEND, 1100);
+    both(ST.HEAD_INT, 900);
+    both(ST.HEAD_RAD, 450);
+    both(ST.T_RING, 16000, 9000);
+    both(ST.T_AXIAL, 26000, 26000 * lerp(0.5, 0.03, fl));
+    both(ST.T_CORE, 20000, 20000 * lerp(0.6, 0.05, fl));
+    both(ST.T_SHEAR, 7000 * lerp(1, 0.22, fl));
+    both(ST.T_BEND, 4000 * lerp(1, 0.02, fl));
+    both(ST.ATTACH, 9000);
+    both(ST.SKIRT, 2500);
+    simF[0] = SUB_DT;
+    simF[1] = params.gravity * 1.6;
+    simF[2] = Math.exp(-(0.04 + 2.6 * d * d) * SUB_DT);
+    simF[3] = 0.012 + 0.10 * d;
+    simF[4] = params.friction;
+    simF[5] = WALL_HX;
+    simF[6] = WALL_HZ;
+    simUi[7] = N;
+    simI[8] = grab.idx;
+    simF[9] = 6000;
+    simF[10] = grab.sigma2;
+    simF[11] = 90;
+    simF[12] = grab.target[0]; simF[13] = grab.target[1]; simF[14] = grab.target[2]; simF[15] = 2.5;
+    simF.set(model.segR, 40);
+    simF[56] = 70000 * s;
+    simF[57] = model.restVolume;
+    simUi[58] = model.numTris;
+    simUi[59] = model.core;
+    simUi[60] = model.headCount;
+    simUi[61] = model.NO;
+    simUi[62] = model.tentBase;
+    simF[63] = 0.45;
+    device.queue.writeBuffer(simUBuf, 0, simU);
+  }
+  const skinU = new ArrayBuffer(16), skinF = new Float32Array(skinU);
+  new Uint32Array(skinU)[0] = V;
+  const frameF = new Float32Array(96);
+  const postF = new Float32Array(4);
+  const depthU = new Float32Array(20);
+  function shellCount() { return Math.round(clamp(14 + params.furLength * 150, 12, 38)); }
+  function writeFrameUniforms(time) {
+    frameF.set(viewProj, 0); frameF.set(invViewProj, 16); frameF.set(lightVP, 32); frameF.set(topVP, 48);
+    frameF.set([camPos[0], camPos[1], camPos[2], 1], 64);
+    frameF.set([LIGHT_DIR[0], LIGHT_DIR[1], LIGHT_DIR[2], 1], 68);
+    frameF.set([params.furLength, params.furDensity, params.furClump, shellCount()], 72);
+    frameF.set([time, params.gravity / 10, showLattice ? 1 : 0, mesh.eyeBase], 76);
+    frameF.set([W, Hh, 1 / W, 1 / Hh], 80);
+    frameF.set([view[0], view[4], view[8], 0], 84);
+    frameF.set([view[1], view[5], view[9], 0], 88);
+    frameF.set([V, 0, 0, 0], 92);
+    device.queue.writeBuffer(frameUBuf, 0, frameF);
+    depthU.set(lightVP, 0); depthU[16] = params.furLength;
+    device.queue.writeBuffer(lightUBuf, 0, depthU);
+    depthU.set(topVP, 0);
+    device.queue.writeBuffer(topUBuf, 0, depthU);
+    postF[0] = W; postF[1] = Hh; postF[2] = time % 100; postF[3] = 1.0;
+    device.queue.writeBuffer(postUBuf, 0, postF);
+  }
+
+  // ---------------- telemetry
+  const tele = { low: 0, frames: 0, acc: 0, fps: 0, lat: 0, latN: 0, latPending: false, cpuMs: 0, hist: [], last: performance.now(), substeps: 0, invocations: 0, dispatches: 0 };
+  const spark = $('spark'), sctx = spark.getContext('2d');
+  const physThreads = Math.ceil(N / 64) * 64, skinThreads = Math.ceil(V / 64) * 64;
+  $('tPart').textContent = `${N.toLocaleString()} · ${model.numPairs.toLocaleString()}`;
+  function drawSpark() {
+    const w = spark.clientWidth, h = spark.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (spark.width !== Math.round(w * dpr)) { spark.width = Math.round(w * dpr); spark.height = Math.round(h * dpr); }
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sctx.clearRect(0, 0, w, h);
+    const hist = tele.hist, n = hist.length;
+    if (n < 2) return;
+    const max = Math.max(65, ...hist);
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7a64e4';
+    sctx.beginPath();
+    hist.forEach((v, i) => { const x = (i / (60 - 1)) * w, y = h - 2 - (v / max) * (h - 4); i ? sctx.lineTo(x, y) : sctx.moveTo(x, y); });
+    sctx.strokeStyle = accent; sctx.lineWidth = 1.6; sctx.stroke();
+    sctx.lineTo(((n - 1) / 59) * w, h); sctx.lineTo(0, h); sctx.closePath();
+    sctx.globalAlpha = 0.12; sctx.fillStyle = accent; sctx.fill(); sctx.globalAlpha = 1;
+    const y60 = h - 2 - (60 / max) * (h - 4);
+    sctx.setLineDash([3, 3]); sctx.strokeStyle = 'rgba(128,120,160,.45)'; sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(0, y60); sctx.lineTo(w, y60); sctx.stroke(); sctx.setLineDash([]);
+  }
+  function updateTelemetry() {
+    $('tFps').innerHTML = `${tele.fps.toFixed(0)}<small>fps</small>`;
+    $('tFps').style.color = tele.fps >= 50 ? 'var(--good)' : tele.fps >= 28 ? 'var(--warn)' : 'var(--bad)';
+    $('tLat').innerHTML = `${tele.lat.toFixed(1)}<small>ms</small>`;
+    $('tThreads').innerHTML = `${tele.invocations.toLocaleString()}<small>/frame · ${physThreads.toLocaleString()}/dispatch</small>`;
+    $('tFrame').textContent = `${tele.cpuMs.toFixed(2)} ms`;
+    const ms = (v) => (v > 0 ? v.toFixed(2) : '–');
+    $('tGpu').textContent = ts ? `${ms(ts.compute)} / ${ms(ts.render)} ms` : 'n/a (no timestamp-query)';
+    $('tSub').textContent = `${tele.substeps} × ${(SUB_DT * 1000).toFixed(2)} ms`;
+    $('tDisp').textContent = `${tele.dispatches}`;
+    $('tMesh').textContent = `${V.toLocaleString()} · ${params.furLength > 0 ? shellCount() : 0}`;
+    $('tRes').textContent = `${W}×${Hh} · ${MSAA}×`;
+    drawSpark();
+  }
+
+  // ---------------- grab overlay
+  const gl = $('grabLine'), gd = $('grabDot'), gr = $('grabRoot');
+  function project(p) {
+    const c = M4.xform(viewProj, p);
+    const r = canvas.getBoundingClientRect();
+    return [(c[0] / c[3] * 0.5 + 0.5) * r.width, (0.5 - c[1] / c[3] * 0.5) * r.height];
+  }
+  function updateOverlay() {
+    const vis = grab.idx >= 0 ? 'visible' : 'hidden';
+    gl.setAttribute('visibility', vis); gd.setAttribute('visibility', vis); gr.setAttribute('visibility', vis);
+    if (grab.idx < 0) return;
+    const p = [cpu[grab.idx * 8], cpu[grab.idx * 8 + 1], cpu[grab.idx * 8 + 2]];
+    const a = project(sub3(p, grab.offset)), b = project(sub3(grab.target, grab.offset));
+    gl.setAttribute('x1', a[0]); gl.setAttribute('y1', a[1]); gl.setAttribute('x2', b[0]); gl.setAttribute('y2', b[1]);
+    gd.setAttribute('cx', b[0]); gd.setAttribute('cy', b[1]); gr.setAttribute('cx', a[0]); gr.setAttribute('cy', a[1]);
+  }
+
+  // ---------------- frame loop
+  let lastT = performance.now(), simAcc = 0, hintFaded = false;
+  const t0 = performance.now();
+  function frame(now) {
+    const cpuStart = performance.now();
+    const dt = Math.min((now - lastT) / 1000, 1 / 20);
+    lastT = now;
+    resize();
+    // camera easing
+    const k = 1 - Math.exp(-dt * 12);
+    cam.cur.theta += (cam.theta - cam.cur.theta) * k;
+    cam.cur.phi += (cam.phi - cam.cur.phi) * k;
+    cam.cur.dist += (cam.dist - cam.cur.dist) * k;
+    updateCamera();
+    if (grab.idx >= 0) updateGrabTarget(grab.mouse[0], grab.mouse[1]);
+
+    simAcc += dt;
+    let sub = Math.floor(simAcc / SUB_DT);
+    sub = clamp(sub - (sub & 1), 4, 48);
+    simAcc = Math.max(0, simAcc - sub * SUB_DT);
+    simAcc = Math.min(simAcc, SUB_DT * 4);
+
+    writeSimUniform();
+    skinF[1] = Math.max(dt, 1 / 240); skinF[2] = params.gravity * 1.6;
+    device.queue.writeBuffer(skinUBuf, 0, skinU);
+    writeFrameUniforms((now - t0) / 1000);
+
+    const enc = device.createCommandEncoder();
+    // --- physics + skinning
+    const cp = enc.beginComputePass(ts ? { timestampWrites: { querySet: ts.qs, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1 } } : {});
+    const physWG = Math.ceil(N / 64);
+    for (let s = 0; s < sub; s++) {
+      const bg = (s & 1) ? bgBA : bgAB;
+      cp.setBindGroup(0, bg);
+      cp.setPipeline(volPipe); cp.dispatchWorkgroups(1);
+      cp.setPipeline(stepPipe); cp.dispatchWorkgroups(physWG);
+    }
+    cp.setPipeline(skinPipe); cp.setBindGroup(0, skinBG); cp.dispatchWorkgroups(Math.ceil(V / 64));
+    cp.end();
+    // --- shadow map + top-down occlusion map
+    for (const [view, bg] of [[shadowTex.createView(), lightBG], [topTex.createView(), topBG]]) {
+      const dp = enc.beginRenderPass({ colorAttachments: [], depthStencilAttachment: { view, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'store' } });
+      dp.setPipeline(depthPipe); dp.setBindGroup(0, bg); dp.setIndexBuffer(idxBuf, 'uint32'); dp.drawIndexed(mesh.numIdx);
+      dp.end();
+    }
+    // --- per-vertex shadow / AO
+    const vp = enc.beginComputePass();
+    vp.setPipeline(vshPipe); vp.setBindGroup(0, vshBG); vp.dispatchWorkgroups(Math.ceil(V / 64));
+    vp.end();
+    // --- main pass
+    const mp = enc.beginRenderPass({
+      colorAttachments: [{ view: msaaView, resolveTarget: hdrView, loadOp: 'clear', storeOp: 'discard', clearValue: { r: 0, g: 0, b: 0, a: 1 } }],
+      depthStencilAttachment: { view: depthView, depthClearValue: 1, depthLoadOp: 'clear', depthStoreOp: 'discard' },
+      ...(ts ? { timestampWrites: { querySet: ts.qs, beginningOfPassWriteIndex: 2, endOfPassWriteIndex: 3 } } : {}),
+    });
+    mp.setBindGroup(0, renderBG);
+    mp.setPipeline(bgPipe); mp.draw(3);
+    mp.setPipeline(tablePipe); mp.setVertexBuffer(0, tableVB); mp.setIndexBuffer(tableIB, 'uint32'); mp.drawIndexed(table.count);
+    mp.setIndexBuffer(idxBuf, 'uint32');
+    mp.setPipeline(bodyPipe); mp.drawIndexed(mesh.numIdx);
+    mp.setPipeline(eyePipe); mp.setVertexBuffer(0, eyeVB); mp.setIndexBuffer(eyeIB, 'uint16'); mp.drawIndexed(sphere.count, 2);
+    if (params.furLength > 0.001) {
+      mp.setPipeline(furPipe); mp.setIndexBuffer(idxBuf, 'uint32'); mp.drawIndexed(mesh.numIdx, shellCount());
+    }
+    if (showLattice) {
+      mp.setPipeline(linePipe); mp.draw(model.numPairs * 2);
+      mp.setPipeline(nodePipe); mp.draw(6, N);
+    }
+    mp.end();
+    // --- tone-map to the swap chain
+    const pp = enc.beginRenderPass({ colorAttachments: [{ view: context.getCurrentTexture().createView(), loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 1 } }] });
+    pp.setPipeline(postPipe); pp.setBindGroup(0, postBG); pp.draw(3);
+    pp.end();
+
+    let doRead = false, doTs = false;
+    if (!readPending) { enc.copyBufferToBuffer(stateA, 0, readBuf, 0, N * 32); doRead = true; }
+    if (ts) {
+      enc.resolveQuerySet(ts.qs, 0, 4, ts.resolve, 0);
+      if (!ts.pending) { enc.copyBufferToBuffer(ts.resolve, 0, ts.read, 0, 32); doTs = true; }
+    }
+    const submitT = performance.now();
+    device.queue.submit([enc.finish()]);
+
+    if (doRead) {
+      readPending = true;
+      readBuf.mapAsync(GPUMapMode.READ).then(() => { cpu.set(new Float32Array(readBuf.getMappedRange())); readBuf.unmap(); readPending = false; },
+                                             () => { readPending = false; });
+    }
+    if (doTs) {
+      ts.pending = true;
+      ts.read.mapAsync(GPUMapMode.READ).then(() => {
+        const q = new BigUint64Array(ts.read.getMappedRange());
+        const c = Number(q[1] - q[0]) / 1e6, r = Number(q[3] - q[2]) / 1e6;
+        if (c >= 0 && c < 1000) ts.compute = ts.compute * 0.85 + c * 0.15;
+        if (r >= 0 && r < 1000) ts.render = ts.render * 0.85 + r * 0.15;
+        ts.read.unmap(); ts.pending = false;
+      }, () => { ts.pending = false; });
+    }
+    if (!tele.latPending) {
+      tele.latPending = true;
+      device.queue.onSubmittedWorkDone().then(() => {
+        const l = performance.now() - submitT;
+        tele.lat = tele.latN ? tele.lat * 0.85 + l * 0.15 : l; tele.latN++;
+        tele.latPending = false;
+      });
+    }
+
+    // telemetry
+    tele.substeps = sub;
+    tele.dispatches = sub * 2 + 2;
+    tele.invocations = sub * (physThreads + 256) + skinThreads * 2;
+    tele.frames++; tele.acc += dt;
+    const cpuMs = performance.now() - cpuStart;
+    tele.cpuMs = tele.cpuMs ? tele.cpuMs * 0.9 + cpuMs * 0.1 : cpuMs;
+    if (now - tele.last > 250) {
+      tele.fps = tele.frames / Math.max(1e-3, (now - tele.last) / 1000);
+      tele.frames = 0; tele.last = now;
+      tele.hist.push(tele.fps); if (tele.hist.length > 60) tele.hist.shift();
+      // adaptive resolution: after a sustained run of slow frames, shrink the pixel budget
+      if (now - t0 > 5000 && document.visibilityState === 'visible') {
+        tele.low = tele.fps < 40 ? tele.low + 1 : 0;
+        if (tele.low >= 6 && pixelBudget > 0.7e6) { pixelBudget *= 0.75; tele.low = 0; resize(); }
+      }
+      updateTelemetry();
+    }
+    updateOverlay();
+    if (!hintFaded && now - t0 > 14000) { $('hint').style.opacity = '0.0'; hintFaded = true; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+main().catch((err) => showError('Something went wrong while starting WebGPU.', (err && (err.detail || err.stack || err.message)) || String(err)));
+</script>
+</body>
+</html>

@@ -25,6 +25,10 @@ A 3D memory palace application that transforms any content into an interactive s
 - **Mini-Map** — 2D overhead view showing room positions, memory nodes, and your current location.
 - **Keyboard Navigation** — Arrow keys or WASD to hop between nodes, number keys to jump to specific items, Enter to expand content.
 
+## Demos
+
+- [`demos/plush-octopus.html`](demos/plush-octopus.html) — a self-contained WebGPU toy: a plush octopus simulated as a mass-spring + pressure soft body in compute shaders, with shell-rendered procedural fur and a live tuning/telemetry sidebar. Open the file directly in a WebGPU-capable browser (Chrome/Edge 113+, Safari 26+); no build step or server needed.
+
 ## Getting Started
 
 ### Prerequisites
